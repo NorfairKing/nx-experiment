@@ -170,66 +170,10 @@ exists to protect.
    341-package pnpm closure, none of which is the question. The "every unit
    rebuilt" row already answers the useful version.
 
-## The plan: measure evaluation cost at scale
+## The plan
 
-The deferral of scale is spent, because the remaining question is a scaling
-question. Phases are ordered so the cheap, safe measurement comes first and
-answers the main question on its own.
-
-### Phase 1 — a generator, output untracked
-
-`scripts/generate-scale-workspace.mjs`, deterministic, taking a project count
-and emitting a workspace with the same DAG shapes as the hand-written one
-(shared foundation, diamonds, fan-ins, chains, orphans, a dev-only dependency),
-into `scale/` — **gitignored**, so the 19-project baseline and every committed
-number in `results/` stay untouched. Its own flake, reusing `nix/` by relative
-path or a copy; do not make the main flake depend on generated content.
-
-Sizes: 25, 50, 100, 200, 300.
-
-### Phase 2 — evaluation scaling, eval only
-
-This is the whole question and it needs no builds:
-
-    nix eval --json .#packages.x86_64-linux --apply '<drvPath map>'
-
-timed at each size, three runs each for variance, plus `nix flake show`-style
-attribute counts. Record projects, derivations, evaluation ms. Look for the
-shape of the curve, not the absolute: linear, and architecture C is
-uncomfortable at 300; sublinear or flat, and it is settled.
-
-Also worth capturing cheaply at each size: `nix eval` time for the bridge
-(`nix/projects.json` grows linearly), and Nx's own graph-construction time,
-since that is the other thing that scales.
-
-Cost: seconds per measurement, no builds, no store mutation. Do this first and
-the report can be written even if nothing else happens.
-
-### Phase 3 — build cost at scale, only if phase 2 says the approach survives
-
-At the largest size that stays comfortable, and with
-`--option post-build-hook "" --max-jobs 4`:
-
-- rebuild every unit (edit `vitest.shared.ts`, which invalidates every test
-  derivation and no build derivation — never delete from the store),
-- rebuild after a shared-foundation edit,
-- `nix flake check` wall clock.
-
-Watch `df -h` between sizes: a 300-package workspace's `node_modules` and
-`pnpmDeps` FOD are not small, and each size is a separate store path.
-
-### Phase 4 — write up
-
-Extend the granularity section of FINDINGS.md with the scaling curve, and
-settle or qualify the verdict. If evaluation turns out to be the binding
-constraint, that is the most important result in the document, and it belongs
-in the headline rather than the loose ends.
-
-### What not to do
-
-- Do not scale the hand-written 19-project workspace. Its numbers are cited
-  throughout FINDINGS.md.
-- Do not commit generated workspaces.
-- Do not chase the per-unit 1.20 s further without a scaling answer first: at
-  19 projects half of it is evaluation, and whether that half grows is exactly
-  what phase 2 measures.
+In [PLAN.md](PLAN.md). In short: the remaining question is a scaling question,
+so generate workspaces at 25 to 300 projects into a gitignored `scale/`, and
+measure Nix evaluation time against project count. That is answerable with
+`nix eval` alone, no builds and no store mutation, and it decides whether
+architecture C holds at size.
