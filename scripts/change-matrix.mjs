@@ -5,7 +5,14 @@
 // invisible to the Nix side; every mutation below therefore touches a tracked
 // file, and new files are staged before measuring.
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync, appendFileSync, rmSync } from 'node:fs'
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { dirname } from 'node:path'
 
 const outputPath = process.argv[2] ?? 'results/change-matrix.json'
@@ -178,6 +185,24 @@ const restore = (mutation) => {
   }
 }
 
+// A harness that crashes mid-mutation leaves its edit in the working tree, and
+// a later `git add -A` can commit it. That residue is invisible to a clean-tree
+// check, and appending a second copy of the same declaration is a compile
+// error rather than a measurement. Refuse to start instead.
+const MUTATION_MARKER = 'const unused = 1'
+
+const assertNoResidue = (files) => {
+  for (const file of files) {
+    if (!existsSync(file)) continue
+    if (readFileSync(file, 'utf8').includes(MUTATION_MARKER)) {
+      throw new Error(
+        `${file} already contains a harness mutation (${MUTATION_MARKER}); ` +
+          'a previous run left it behind and it may have been committed',
+      )
+    }
+  }
+}
+
 const assertClean = () => {
   const status = run('git', ['status', '--porcelain'])
   if (status.trim() !== '') {
@@ -186,6 +211,7 @@ const assertClean = () => {
 }
 
 assertClean()
+assertNoResidue(mutations.map((mutation) => mutation.file))
 
 const baselineDrvPaths = nixDrvPaths()
 const baselineTaskHashes = nxTaskHashes()

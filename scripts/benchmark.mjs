@@ -9,7 +9,7 @@
 // Wall clock here includes each runner's fixed startup cost, which is the
 // point: it is what finer granularity has to pay for.
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 
 const outputPath = process.argv[2] ?? 'results/benchmark.json'
@@ -77,6 +77,24 @@ const deleteOutputs = (paths) => {
   return paths.filter((path) => !isValid(path)).length
 }
 
+// A harness that crashes mid-mutation leaves its edit in the working tree, and
+// a later `git add -A` can commit it. That residue is invisible to a clean-tree
+// check, and appending a second copy of the same declaration is a compile
+// error rather than a measurement. Refuse to start instead.
+const MUTATION_MARKER = 'const unused = 1'
+
+const assertNoResidue = (files) => {
+  for (const file of files) {
+    if (!existsSync(file)) continue
+    if (readFileSync(file, 'utf8').includes(MUTATION_MARKER)) {
+      throw new Error(
+        `${file} already contains a harness mutation (${MUTATION_MARKER}); ` +
+          'a previous run left it behind and it may have been committed',
+      )
+    }
+  }
+}
+
 const NIX_LEVELS = [
   { id: 'per-package', prefix: 'test-' },
   { id: 'per-test-file', prefix: 'file-' },
@@ -108,6 +126,7 @@ function buildAll(attrs) {
 // The incremental case is the one that matters day to day: one source file in
 // the shared foundation changes, and each system reruns what it must.
 const SHARED_SOURCE = 'packages/core/src/hash.ts'
+assertNoResidue([SHARED_SOURCE])
 const allTestAttrs = attrsWithPrefix('test-')
 
 run('git', ['status', '--porcelain'])
