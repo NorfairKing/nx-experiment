@@ -138,6 +138,36 @@ try {
   run('git', ['restore', '--staged', '--worktree', '--', SHARED_SOURCE])
 }
 
+// The fixed cost of one unit of work, measured directly rather than divided
+// out of a total. An isolated leaf package whose tests take single-digit
+// milliseconds, edited uniquely so nothing has built the result: what is left
+// is almost entirely overhead.
+const LEAF_SOURCE = 'packages/orphan/src/base32.ts'
+assertNoResidue([LEAF_SOURCE])
+
+try {
+  buildAll(['test-orphan'])
+  run('node_modules/.bin/nx', ['run', '@nx-exp/orphan:test'])
+
+  const stamp = Date.now()
+  appendFileSync(
+    LEAF_SOURCE,
+    `\n// ${MUTATION_MARKER} ${stamp}\nconst unused${stamp} = 1\nvoid unused${stamp}\n`,
+  )
+  run('git', ['add', '--', LEAF_SOURCE])
+
+  results.nix.singleLeafDerivationMs = time(
+    'nix, one leaf test derivation, after an edit',
+    () => buildAll(['test-orphan']),
+  )
+  results.nx.singleLeafTaskMs = time(
+    'nx, the same leaf test task, after the edit',
+    () => run('node_modules/.bin/nx', ['run', '@nx-exp/orphan:test']),
+  )
+} finally {
+  run('git', ['restore', '--staged', '--worktree', '--', LEAF_SOURCE])
+}
+
 run('node_modules/.bin/nx', ['reset'])
 results.nx.runManyColdMs = time('nx run-many -t test (empty nx cache)', () =>
   run('node_modules/.bin/nx', ['run-many', '-t', 'test']),
