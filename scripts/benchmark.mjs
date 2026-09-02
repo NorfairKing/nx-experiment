@@ -46,10 +46,7 @@ const buildAll = (attrs) => run('nix', ['build', '--no-link', ...attrs.map((a) =
 const outPathsOf = (attrs) =>
   run('nix', ['path-info', ...attrs.map((a) => `.#${a}`)]).split('\n').filter(Boolean)
 
-const deleteOutputs = (paths) => {
-  const remaining = run('nix', ['store', 'delete', ...paths, '--json'])
-  return JSON.parse(remaining)
-}
+const deleteOutputs = (paths) => run('nix', ['store', 'delete', ...paths])
 
 const NIX_LEVELS = [
   { id: 'per-package', prefix: 'test-' },
