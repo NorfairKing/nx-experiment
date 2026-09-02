@@ -37,9 +37,7 @@ const nixDrvPaths = () =>
   )
 
 const nxAffectedProjects = () => {
-  const raw = run('pnpm', [
-    'exec',
-    'nx',
+  const raw = run('node_modules/.bin/nx', [
     'show',
     'projects',
     '--affected',
@@ -56,9 +54,7 @@ const nxTaskHashes = () =>
   JSON.parse(run('node', ['scripts/dump-nx-hashes.mjs', 'test']))
 
 const nxAffectedTestTasks = () => {
-  const raw = run('pnpm', [
-    'exec',
-    'nx',
+  const raw = run('node_modules/.bin/nx', [
     'show',
     'projects',
     '--affected',
@@ -144,12 +140,15 @@ const mutations = [
     apply: (file) => appendFileSync(file, '\n# touched\n'),
   },
   {
+    // A dependency version bump is inseparable from a lockfile change in
+    // practice, and the lockfile is already a change class, so this touches a
+    // field that genuinely affects nothing.
     id: 'root-manifest',
-    description: 'the root package.json, which pins the vitest and tsc versions',
+    description: 'a field of the root package.json that nothing reads',
     file: 'package.json',
     apply: (file) => {
       const meta = JSON.parse(readFileSync(file, 'utf8'))
-      meta.devDependencies.vitest = '4.1.10'
+      meta.description = 'touched by the change matrix'
       writeFileSync(file, `${JSON.stringify(meta, null, 2)}\n`)
     },
   },
