@@ -543,14 +543,18 @@ after a unique edit:
 | with the upload hook | 3.25 s |
 | without it | **1.20 s** |
 
-Two seconds per derivation, of pure upload. On trivial derivations that do
-nothing but `touch $out`, the marginal cost of one more is about **1200 ms with
-the hook and about 20 ms without** — sixty times everything else combined.
+**Two seconds per derivation, of pure upload**, against 1.20 s for everything
+else the derivation does put together — unpacking its source, assembling the
+package's tree, and running Vitest.
 
 The figure this section previously reported as "the fixed cost per Nix
-derivation", 3.06 s, was therefore about two thirds cache upload. Every Nix
-number below has the hook disabled, and `results/benchmark.json` records
+derivation", 3.06 s, was therefore about two thirds cache upload. Every other
+Nix number below has the hook disabled, and `results/benchmark.json` records
 `postBuildHookDisabled: true` so it cannot quietly come back.
+
+The cost is per derivation, which is why it matters here rather than being
+somebody else's problem: it is charged again for every unit the granularity is
+split into.
 
 ### The numbers
 
