@@ -1,30 +1,34 @@
 {
   "maxJobs": 4,
+  "postBuildHookDisabled": true,
   "nix": {
     "per-package": {
       "derivations": 19,
-      "cachedMs": 64
+      "cachedMs": 63,
+      "everyUnitMs": 2936
     },
     "per-test-file": {
       "derivations": 27,
-      "cachedMs": 72
+      "cachedMs": 71,
+      "everyUnitMs": 3968
     },
     "per-test-file-narrow": {
       "derivations": 27,
-      "cachedMs": 65
+      "cachedMs": 70,
+      "everyUnitMs": 3991
     },
-    "incrementalSharedSourceMs": 45873,
-    "singleLeafDerivationMs": 3061
+    "incrementalSharedSourceMs": 3876,
+    "singleLeafDerivationMs": 1201
   },
   "nx": {
-    "incrementalSharedSourceMs": 6525,
-    "singleLeafTaskMs": 890,
-    "runManyColdMs": 6517,
-    "runManyWarmMs": 471,
+    "incrementalSharedSourceMs": 6548,
+    "singleLeafTaskMs": 864,
+    "runManyColdMs": 6599,
+    "runManyWarmMs": 452,
     "atomizedTaskCount": 27,
     "atomizedTargetNames": 26,
     "groupTargetRunsLocally": false,
     "groupTargetRefusal": "refused",
-    "atomizedColdMs": 3473
+    "atomizedColdMs": 3451
   }
 }
