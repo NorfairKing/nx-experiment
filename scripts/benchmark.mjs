@@ -41,8 +41,12 @@ const attrsWithPrefix = (prefix) =>
     ]),
   )
 
+// nix path-info refuses a path that is not in the store yet, which is exactly
+// the state after a deletion, so the output paths are evaluated instead.
 const outPathsOf = (attrs) =>
-  run('nix', ['path-info', ...attrs.map((a) => `.#${a}`)]).split('\n').filter(Boolean)
+  attrs.map((attr) =>
+    run('nix', ['eval', '--raw', `.#${attr}.outPath`]).trim(),
+  )
 
 const isValid = (path) => {
   try {
