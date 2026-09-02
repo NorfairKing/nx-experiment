@@ -224,9 +224,16 @@ assertion, `nix build .#test-orphan` exits 1.
 
 | granularity | Nix nodes | evaluation | invalidated by one test-file edit | by a shared source edit |
 |---|---:|---:|---:|---:|
-| per package | 19 | 470 ms | 1 / 19 | 14 / 19 |
-| per test file, whole `tests/` as input | 27 | 478 ms | 2 / 27 | 22 / 27 |
-| per test file, single file as input | 27 | 469 ms | 1 / 27 | 22 / 27 |
+| per package | 19 | 1.61 s | 1 / 19 | 14 / 19 |
+| per test file, whole project as input | 27 | 1.67 s | 2 / 27 | 22 / 27 |
+| per test file, single test file as input | 27 | 1.52 s | 1 / 27 | 22 / 27 |
+
+Evaluation time is whatever Nix's caching gives on a repeated call — nothing
+cheap forces a cold evaluator — so read the column as a comparison between
+levels rather than an absolute. It was around 470 ms while the test derivations
+still had hand-picked filesets; broadening them to the whole project directory,
+for the reasons above, roughly tripled it, because `lib.fileset.toSource` now
+copies each project directory during evaluation.
 
 Two things stand out.
 
@@ -541,11 +548,16 @@ alone decides what to rebuild, and it decides correctly — including the
 dev-dependency case Nx itself gets wrong, and the `pnpm-workspace.yaml` case Nx
 misses. Nx is not needed at execution time at all.
 
-**D. Nx tasks become Nix derivations.** No measurable gain over C here. The
-task graph adds `dependsOn` ordering, which C already recovers from the package
-graph, and the task inputs, which turned out to be *less* precise than the
-filesets written directly in Nix. Worth revisiting for a workspace with many
-targets per project, where the task graph is not just the project graph again.
+**D. Nx tasks become Nix derivations.** *Not built, so this is an argument from
+the shape of the data rather than a measurement, and should be read as such.*
+The task graph carries two things C does not: `dependsOn` ordering, which C
+already recovers from the package graph, and the per-task inputs, which
+`results/input-comparison.json` shows to be less complete than the filesets
+written directly in Nix — they are the two entries Nx misses, the root manifest
+and `pnpm-workspace.yaml`. With one test target and one build target per
+project, this workspace's task graph is very nearly its project graph relabelled,
+so there is little room for a gain. Worth actually building for a workspace with
+several targets per project, where that stops being true.
 
 **E. Nx test atoms become Nix derivations.** The one place Nx supplies something
 genuinely new — the per-file split, and past the Cloud gate. But it costs 27

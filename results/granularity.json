@@ -5,21 +5,21 @@
       "prefix": "test-",
       "description": "one Vitest derivation per package",
       "nodeCount": 19,
-      "evaluationMs": 521
+      "evaluationMs": 1614
     },
     {
       "id": "per-test-file",
       "prefix": "file-",
       "description": "one derivation per test file, whole tests directory as input",
       "nodeCount": 27,
-      "evaluationMs": 446
+      "evaluationMs": 1672
     },
     {
       "id": "per-test-file-narrow",
       "prefix": "narrow-",
       "description": "one derivation per test file, only that file as input",
       "nodeCount": 27,
-      "evaluationMs": 468
+      "evaluationMs": 1515
     }
   ],
   "invalidation": [
