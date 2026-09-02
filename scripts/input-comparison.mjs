@@ -35,7 +35,17 @@ const run = (command, args) =>
     env: { ...process.env, NX_DAEMON: 'false' },
   })
 
-const table = JSON.parse(readFileSync('nix/projects.json', 'utf8')).projects
+// The project table now lives in the evaluator rather than a generated file,
+// so ask Nix for it.
+const table = JSON.parse(
+  run('nix', [
+    'eval',
+    '--json',
+    '--impure',
+    '--expr',
+    'let lib = (import <nixpkgs> { }).lib; in (import ./nix/graph.nix { inherit lib; }).projects',
+  ]),
+)
 const repoFiles = run('git', ['ls-files']).split('\n').filter(Boolean).sort()
 
 const nxJson = readNxJson()
