@@ -757,5 +757,14 @@ checks because the question has three parts.
 - Whether the evaluation half of that shrinks or grows with the number of
   projects. At 19 projects it is around 0.6 s per invocation and flat across
   granularities, which says nothing about 300.
+- A from-source build including the toolchain was considered and **not**
+  measured, deliberately. It would mean building into a throwaway store under
+  `--store /tmp/...`, and the number would be dominated by populating that
+  store with Node, stdenv and the 341-package pnpm dependency closure — none of
+  which is what this experiment asks about. The "every unit rebuilt" row in the
+  cost table already answers the useful version: every derivation this repo
+  defines, rebuilt from a state where none of them existed. What is missing is
+  only the one-off cost of a machine that has never seen the toolchain, and
+  that is a property of Nix in general rather than of testing granularity.
 - Prototype 4 (the Nx task graph becoming Nix derivations) is argued against
   below from the shape of the data rather than measured. It was never built.
