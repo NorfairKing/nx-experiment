@@ -17,3 +17,6 @@ result-*
 # distilled into the committed nix/projects.json.
 results/nx-graph.json
 results/nx-graph-export.json
+
+# Generated workspaces for the scaling measurement.
+scale/
