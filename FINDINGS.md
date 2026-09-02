@@ -592,12 +592,12 @@ after a unique edit:
 
 | | one unit |
 |---|---:|
-| with the upload hook | 3.25 s |
-| without it | **1.20 s** |
+| with the upload hook | 3.02 s |
+| without it | **1.18 s** |
 
-**Two seconds per derivation, of pure upload**, against 1.20 s for everything
-else the derivation does put together — unpacking its source, assembling the
-package's tree, and running Vitest.
+**About 1.8 s per derivation, of pure upload**, against 1.18 s for everything
+else the derivation does put together — evaluating, unpacking its source,
+assembling the package's tree, and running Vitest.
 
 The figure this section previously reported as "the fixed cost per Nix
 derivation", 3.06 s, was therefore about two thirds cache upload. Every other
@@ -1062,9 +1062,10 @@ something being there.
   does not have `ca-derivations` enabled and enabling it is a system change.
   The prerequisite is now in place — see the section above — so the experiment
   is a few attributes away for anyone whose daemon allows it.
-- The remaining per-unit gap, 1.20 s against Nx's 0.88 s, of which roughly half
-  is Nix evaluation rather than work. Sharing the workspace skeleton was
-  examined and rejected on measurement; see the cost section.
+- The single-unit gap, 1.18 s against Nx's 0.85 s, of which 816 ms is Nix
+  evaluation rather than work. Amortised across an invocation Nix is ahead, so
+  this only bites an editor-driven loop that builds one package at a time.
+  Whether Nix can be invoked once and told to watch is unexplored.
 - Whether that per-unit gap matters in practice, given that Nix wins on every
   aggregate case. It is the number an editor-driven loop hits, so probably yes,
   and roughly half of it is evaluation rather than work.

@@ -115,11 +115,18 @@ store path. Once each output carries `node_modules/@nx-exp/<dep>` symlinks,
 to 1/19. A build step doing the same stripping would not work: it still takes
 the full manifests as its own input.
 
-**Cost, hook disabled, `--max-jobs 4`.** Nix 68 ms to establish everything is
-current, against Nx 467 ms. Nix 3.80 s to rebuild after a shared-foundation
-edit, against Nx 6.57 s. Nix 1.20 s for one isolated unit, against Nx 0.88 s —
-the only case Nix loses, and about half of it is evaluation rather than work.
-With the upload hook that same unit costs 3.25 s.
+**Cost, hook disabled, `--max-jobs 4`** (`results/benchmark.json`). Nix wins
+almost everywhere: 75 ms to establish everything is current against Nx's
+458 ms; 3.76 s to rerun what a shared-foundation edit invalidates against
+6.38 s; 156 ms per unit of work with evaluation amortised against 341 ms. It
+loses only on building a *single* unit, 1.18 s against 0.85 s, and 816 ms of
+that is one invocation's evaluation. With the upload hook that same unit costs
+3.02 s.
+
+**Evaluation dominates the per-unit cost and is flat in workspace size.** Of
+1177 ms for one leaf test derivation: 816 ms evaluation, 292 ms Vitest, 69 ms
+stdenv and tree assembly. Evaluation goes 107 ms at 24 projects to 148 ms at
+389, so it is a fixed cost per invocation rather than per project.
 
 **Content-addressed derivations are blocked here.** `__contentAddressed` is
 refused at evaluation even with `--extra-experimental-features ca-derivations`
@@ -131,12 +138,11 @@ downstream reads them. Note that exposing CA derivations as flake outputs makes
 `nix flake check` fail, since it evaluates every attribute under `packages`.
 
 **Sharing the workspace skeleton between derivations was examined and
-rejected.** The skeleton is not the expensive part; per unit it is roughly
-0.6 s evaluation, 0.3 s stdenv plus tree assembly, 0.3 s Vitest. What can be
-shared already is, as the `nodeModules` derivation. Going further means a
-shared derivation holding the package sources, which becomes an input to every
-test, so any source edit invalidates all of them — the property the design
-exists to protect.
+rejected.** It could only ever recover the 69 ms line above: 6% of one unit, 2%
+of a nineteen-unit run. What can be shared already is, as the `nodeModules`
+derivation. Going further means a shared derivation holding the package
+sources, which becomes an input to every test, so any source edit invalidates
+all of them — the property the design exists to protect.
 
 ## Repo-specific traps
 
