@@ -64,6 +64,13 @@ let
       mkdir -p $out/node_modules/@nx-exp
       cp package.json $out/package.json
       cp -r dist $out/dist
+      # Declaration maps let an editor jump from a .d.ts to the .ts it came
+      # from. Nothing that consumes this output reads them: a dependent's tsc
+      # reads the .d.ts and its Vitest reads the .js. They are also the only
+      # part of the output that encodes source positions, so they are the only
+      # reason a formatting-only edit changes it at all — which is exactly what
+      # content-addressed early cutoff needs it not to do.
+      find $out/dist -name '*.d.ts.map' -delete
       ${linkDepsInto builds "$out" project.runtimeDeps}
 
       runHook postInstall

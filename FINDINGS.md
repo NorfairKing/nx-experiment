@@ -245,6 +245,78 @@ The one real trap nearby is exit status. `vitest run | tee $out/log` reports
 pipefail` is load-bearing, and worth checking deliberately: with a broken
 assertion, `nix build .#test-orphan` exits 1.
 
+## Content-addressed derivations: the prerequisite, and the blocker
+
+The motivating case is early cutoff. A formatting-only edit to
+`packages/core/src/hash.ts` changes that file, so `build-core` rebuilds — fair
+enough — but its *output* need not change, and every dependent's derivation
+rebuilds anyway because it refers to `build-core` by the store path that
+produced it rather than by what it produced. Content-addressed derivations are
+the mechanism that stops that propagating.
+
+### The prerequisite is a real finding on its own
+
+For early cutoff to fire, `tsc`'s output has to actually be byte-identical
+under a change that does not affect semantics. It was not:
+
+```
+before/after a formatting-only edit to core:
+  DIFFERS: ./dist/hash.d.ts.map
+```
+
+`dist/hash.js` and `dist/hash.d.ts` were identical. The **declaration map** was
+the only difference, and of course it was: a `.d.ts.map` exists to encode
+source positions, so any edit that moves a line changes it. One artifact whose
+entire purpose is to record where things were in the source is enough to defeat
+content addressing for the whole package.
+
+Nothing that consumes a build output reads it. A dependent's `tsc` reads the
+`.d.ts`; its Vitest reads the `.js`. Declaration maps are for an editor jumping
+from a `.d.ts` back to the `.ts`, and an editor does that against the workspace,
+not against a Nix store path. So `nix/per-package.nix` deletes them from the
+output, and after that the output *is* byte-identical under a formatting-only
+edit while the input-addressed store path still changes — which is exactly the
+situation content addressing exists to fix.
+
+This generalises past this experiment: **before reaching for content-addressed
+derivations, check that the build output does not contain a positional
+artifact.** Source maps, declaration maps, build timestamps and embedded paths
+all guarantee the output changes whenever the input does, and they are usually
+emitted by default.
+
+### The blocker
+
+The experiment itself could not be run on this machine. `__contentAddressed =
+true` is refused at evaluation time:
+
+```
+error: experimental Nix feature 'ca-derivations' is disabled;
+       add '--extra-experimental-features ca-derivations' to enable it
+```
+
+It is refused *with* that flag passed. `nix config show experimental-features`
+confirms the client accepted it (`ca-derivations fetch-tree flakes
+nix-command`) and `nix store info` reports `Trusted: 1`, and it is still
+refused — for a bare `builtins.derivation` as much as for a stdenv one. The
+store is the daemon (`Store URL: daemon`), and the daemon validates the
+derivation when it is written to the store; a client cannot enable a feature
+the daemon was not started with. Enabling it means editing the daemon's
+configuration and restarting it, which is a change to the user's system and
+outside what this experiment should be doing unasked.
+
+Worth knowing if you try this: exposing content-addressed derivations as flake
+outputs makes **`nix flake check` fail**, because it evaluates every attribute
+under `packages` and the eval is what throws. The experiment has to be gated
+somewhere `flake check` does not reach, or it takes the feedback loop down with
+it.
+
+So the honest state: the prerequisite is done and measured, the mechanism is
+untested, and the recipe is four attributes on the build derivation
+(`__contentAddressed = true`, `outputHashAlgo = "sha256"`,
+`outputHashMode = "recursive"`), kept out of `packages`. The observable to use
+is whether `build-strings`'s output path survives a formatting-only edit to
+`core`; input-addressed, it does not.
+
 ## Granularity: what per-test-file buys
 
 | granularity | Nix nodes | evaluation | invalidated by one test-file edit | by a shared source edit |
@@ -675,10 +747,10 @@ checks because the question has three parts.
 
 - Evaluation cost at 100–300 packages and thousands of derivations is untested;
   everything here is at 19 projects. This is the main thing scale would tell us.
-- Content-addressed derivations were not tried. Eval-time reduction removed the
-  motivating case for the install, but `__contentAddressed` would give early
-  cutoff for build outputs too, where a comment-only source edit currently
-  rebuilds every dependent's tests even though `tsc`'s output is unchanged.
+- Content-addressed derivations remain untested: the daemon on this machine
+  does not have `ca-derivations` enabled and enabling it is a system change.
+  The prerequisite is now in place — see the section above — so the experiment
+  is a few attributes away for anyone whose daemon allows it.
 - The remaining per-unit gap, 1.20 s against Nx's 0.88 s, of which roughly half
   is Nix evaluation rather than work. Sharing the workspace skeleton was
   examined and rejected on measurement; see the cost section.
