@@ -59,12 +59,19 @@ const isValid = (path) => {
 
 // Deletes what it can and reports what survived, one path at a time so one
 // live path does not abort the rest.
+//
+// keep-outputs is on in this store, which keeps an output alive for as long as
+// its derivation is alive and makes every deletion fail. Overriding it for the
+// deletion is what makes a cold measurement possible at all.
 const deleteOutputs = (paths) => {
   for (const path of paths) {
     try {
-      run('nix', ['store', 'delete', path], { stdio: 'pipe' })
+      run('nix', ['store', 'delete', '--option', 'keep-outputs', 'false', path], {
+        stdio: 'pipe',
+      })
     } catch {
-      // Still alive: a concurrent nix process may hold a temporary root.
+      // Still alive for some other reason: a concurrent nix process may hold a
+      // temporary root.
     }
   }
   return paths.filter((path) => !isValid(path)).length
@@ -96,6 +103,31 @@ for (const level of NIX_LEVELS) {
 
 function buildAll(attrs) {
   return run('nix', ['build', '--no-link', ...attrs.map((a) => `.#${a}`)])
+}
+
+// The incremental case is the one that matters day to day: one source file in
+// the shared foundation changes, and each system reruns what it must.
+const SHARED_SOURCE = 'packages/core/src/hash.ts'
+const allTestAttrs = attrsWithPrefix('test-')
+
+run('git', ['status', '--porcelain'])
+try {
+  buildAll(allTestAttrs)
+  run('node_modules/.bin/nx', ['run-many', '-t', 'test'])
+
+  run('bash', ['-c', `printf '\nconst unused = 1\nvoid unused\n' >> ${SHARED_SOURCE}`])
+  run('git', ['add', '--', SHARED_SOURCE])
+
+  results.nix.incrementalSharedSourceMs = time(
+    'nix all tests after a shared-source edit',
+    () => buildAll(allTestAttrs),
+  )
+  results.nx.incrementalSharedSourceMs = time(
+    'nx affected -t test after the same edit',
+    () => run('node_modules/.bin/nx', ['affected', '-t', 'test', '--base=HEAD']),
+  )
+} finally {
+  run('git', ['restore', '--staged', '--worktree', '--', SHARED_SOURCE])
 }
 
 run('node_modules/.bin/nx', ['reset'])
