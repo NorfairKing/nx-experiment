@@ -17,3 +17,6 @@ export function hashHex(input: string): string {
 export function mixHashes(left: number, right: number): number {
   return (Math.imul(left ^ right, FNV_PRIME) >>> 0) ^ (left >>> 16)
 }
+
+const unused = 1
+void unused

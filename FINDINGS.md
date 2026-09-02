@@ -309,25 +309,46 @@ trusting a local cache directory.
 
 ## How hard is the transfer
 
-Small, and that is a genuine finding: the bridge is about 90 lines.
+Small, and that is a genuine finding: the bridge is 69 lines.
 
-- `scripts/dump-nx.mjs` exports the project graph, task graph and per-task
-  input specifications.
-- `scripts/nx-to-nix.mjs` reduces that to `nix/projects.json`: per project, its
-  root, its runtime and dev dependencies, and its test files.
+- `nx graph --file` exports the graph.
+- `scripts/nx-to-nix.mjs` (69 lines) reduces it to `nix/projects.json`: per
+  project, its root, its runtime and dev dependencies, and its test files.
 - `nix/per-package.nix` and `nix/per-test-file.nix` read that file.
 
-The catch is API stability. Only `createProjectGraphAsync` comes from
-`@nx/devkit`. Everything else — `createTaskGraph`, `getInputs`,
-`getTargetInputs`, `createTaskHasher`, `createProjectFileMapUsingProjectGraph`,
-`readNxJson` — is imported through `nx/src/...`. The `nx` package's export map
-exposes `./src/*`, so these are reachable, but they are internals with no
-compatibility promise, and their shapes are pinned to the locked Nx version.
-The `nx graph --file=graph.json` export, which *is* the documented path, omits
-the per-project file lists and the task inputs, so it is not sufficient.
+And it needs no Nx internals. The documented export
 
-Anything depending on this should pin Nx exactly and expect to re-check on
-upgrade.
+```bash
+nx graph --file=results/nx-graph-export.json
+```
+
+carries everything the bridge reads: each project's root, the dependency edges
+under `graph.dependencies`, each target's declared `inputs` and `dependsOn`,
+and — the useful part — the atomizer's per-test-file target names, from which
+the test file paths fall straight out:
+
+```
+@nx-exp/core → test-ci--tests/hash.test.ts, test-ci--tests/outcome.test.ts
+```
+
+This was not obvious at the outset, and the first version of the bridge went
+through `nx/src/...` for all of it. The internal APIs are still used, but only
+by `scripts/dump-nx.mjs` and `scripts/input-comparison.mjs`, which measure Nx's
+task inputs and hashes for the comparison in this document. Nothing the
+prototypes build depends on them.
+
+That matters for the practical answer to "is this a stable interface?":
+
+- For **building the bridge**: yes. `nx graph --file` is a documented command
+  with a stable shape.
+- For **comparing input models**, as this experiment does: no.
+  `createTaskGraph`, `getInputs`, `getTargetInputs`, `createTaskHasher` and
+  `createProjectFileMapUsingProjectGraph` are all reached through `nx/src/...`.
+  The export map exposes `./src/*`, so they are importable, but they carry no
+  compatibility promise and their shapes are pinned to the locked Nx version.
+
+The one thing the documented export does not carry is the dependency/dev
+dependency distinction, which comes from the manifests.
 
 ## The architectures
 

@@ -89,9 +89,13 @@ nix-store -q --references $(nix build .#build-parser --no-link --print-out-paths
 after adding a package, a dependency or a test file:
 
 ```bash
-node scripts/dump-nx.mjs test results/nx-graph.json   # export Nx's graph
-node scripts/nx-to-nix.mjs                            # reduce it to nix/projects.json
+nx graph --file=results/nx-graph-export.json   # Nx's documented graph export
+node scripts/nx-to-nix.mjs                     # reduce it to nix/projects.json
 ```
+
+Only documented Nx surface is involved. `scripts/dump-nx.mjs` also exports a
+graph, but it reaches into `nx/src/...` internals to get Nx's task inputs and
+hashes, and exists for the comparison experiments rather than for the bridge.
 
 A stale `nix/projects.json` fails in the unsafe direction — fewer tests, still
 green. The guard derivations catch it for test files:
