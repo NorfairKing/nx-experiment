@@ -3,6 +3,10 @@
 // Node count and evaluation time are the cost; the invalidation counts are the
 // benefit. Both are measured the same way for every level, so the ratio is
 // comparable even though the absolute numbers are specific to this workspace.
+//
+// Evaluation time is whatever Nix's own caching gives on a repeated call; there
+// is no attempt to force a cold evaluator, because nothing cheap does that.
+// Treat the figures as a comparison between levels, not as absolute cost.
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, writeFileSync, appendFileSync } from 'node:fs'
 import { dirname } from 'node:path'
@@ -49,13 +53,6 @@ const drvPathsFor = (prefix) => {
   return { paths, elapsedMs }
 }
 
-// Evaluation is cached after the first call, so every level is measured from a
-// cold evaluator to keep the numbers comparable.
-const coldDrvPathsFor = (prefix) => {
-  run('nix', ['store', 'gc', '--dry-run'])
-  return drvPathsFor(prefix)
-}
-
 const MUTATIONS = [
   {
     id: 'one-test-file',
@@ -82,7 +79,7 @@ assertClean()
 
 const levels = []
 for (const level of LEVELS) {
-  const { paths, elapsedMs } = coldDrvPathsFor(level.prefix)
+  const { paths, elapsedMs } = drvPathsFor(level.prefix)
   levels.push({
     ...level,
     nodeCount: Object.keys(paths).length,
@@ -93,24 +90,26 @@ for (const level of LEVELS) {
 
 const invalidation = []
 for (const mutation of MUTATIONS) {
-  mutation.apply(mutation.file)
-  run('git', ['add', '--', mutation.file])
+  try {
+    mutation.apply(mutation.file)
+    run('git', ['add', '--', mutation.file])
 
-  const perLevel = {}
-  for (const level of levels) {
-    const { paths } = drvPathsFor(level.prefix)
-    const changed = Object.keys(level.baseline).filter(
-      (attr) => paths[attr] !== level.baseline[attr],
-    )
-    perLevel[level.id] = {
-      invalidated: changed.length,
-      total: level.nodeCount,
-      attrs: changed.sort(),
+    const perLevel = {}
+    for (const level of levels) {
+      const { paths } = drvPathsFor(level.prefix)
+      const changed = Object.keys(level.baseline).filter(
+        (attr) => paths[attr] !== level.baseline[attr],
+      )
+      perLevel[level.id] = {
+        invalidated: changed.length,
+        total: level.nodeCount,
+        attrs: changed.sort(),
+      }
     }
+    invalidation.push({ id: mutation.id, file: mutation.file, levels: perLevel })
+  } finally {
+    run('git', ['restore', '--staged', '--worktree', '--', mutation.file])
   }
-  invalidation.push({ id: mutation.id, file: mutation.file, levels: perLevel })
-
-  run('git', ['restore', '--staged', '--worktree', '--', mutation.file])
   assertClean()
 }
 

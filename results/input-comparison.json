@@ -1,5 +1,5 @@
 {
-  "repoFileCount": 148,
+  "repoFileCount": 160,
   "comparisons": {
     "core": {
       "project": "@nx-exp/core",
@@ -338,7 +338,7 @@
       "project": "@nx-exp/orphan",
       "counts": {
         "nx": 9,
-        "nix": 29,
+        "nix": 31,
         "shouldAffect": 11
       },
       "disagreements": [
@@ -422,6 +422,18 @@
         },
         {
           "file": "packages/logging/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/orphan/test-setup.ts",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/orphan/vitest-setup.d.ts",
           "nx": false,
           "nix": true,
           "shouldAffect": false
@@ -582,6 +594,12 @@
           "shouldAffect": true
         },
         {
+          "file": "packages/orphan/test-setup.ts",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
           "file": "packages/orphan/tests/base32.test.ts",
           "nx": true,
           "nix": true,
@@ -592,6 +610,12 @@
           "nx": true,
           "nix": true,
           "shouldAffect": true
+        },
+        {
+          "file": "packages/orphan/vitest-setup.d.ts",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
         },
         {
           "file": "packages/orphan/vitest.config.ts",

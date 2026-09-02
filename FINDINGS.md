@@ -289,9 +289,134 @@ and fails when that disagrees with the generated list. With the file removed,
 `nix build .#guard-core` exits 1 and says which file has no derivation. The
 guards are part of `nix flake check`, so the hole cannot reopen unnoticed.
 
+### The same hole for the dependency edges
+
+The test-file list is not the only thing the bridge caches. The dependency edges
+are cached too, and their drift cases are not symmetric:
+
+| drift | consequence |
+|---|---|
+| an edge `nix/projects.json` has that reality lacks | over-approximates, runs too much, harmless |
+| an edge reality has that `nix/projects.json` lacks | the dependency's store path is never linked, so `tsc` or Vitest cannot resolve the import — loud |
+| **a project missing from `nix/projects.json` entirely** | **no derivation is generated, its tests never run, nothing reports a problem** |
+
+Only the third is silent, and it is the one that happens when somebody adds a
+package and forgets to regenerate. `nix build .#graphAgreement` closes it. That
+derivation rebuilds the project table from the manifests alone — projects
+discovered by globbing the source tree, not read from any Nix-side list — and
+fails when it disagrees with the checked-in table.
+
+Being independent of Nx is the point. A guard generated from the same source as
+the data it checks proves only that the generator is deterministic; this one
+would notice a project Nx never reported, or one Nx reported and the bridge
+dropped.
+
+Demonstrated against four kinds of drift, each caught with a specific message:
+
+- deleting `orphan` from the table — the test derivations silently fall from 19
+  to 18, and the guard exits 1 with *"orphan (packages/orphan) is a workspace
+  project with no entry in nix/projects.json, so no derivation is generated for
+  it and its tests never run"*;
+- reclassifying `test-utils` from a dev dependency of `parser` to a runtime one,
+  which would quietly undo the 4-versus-8 precision win;
+- dropping `tokens` from `parser`'s dependencies;
+- adding a package and not regenerating.
+
+### And a third hole: nothing was typechecking
+
+A package's tests deliberately do not depend on that package's own build — the
+tests import `src` directly, and that independence is a precision win. But
+**Vitest does not typecheck.** Vite strips types through esbuild without
+checking them, so a type error in a package's source is invisible to its tests.
+Combine the two and a leaf package with no dependants was never typechecked by
+anything in `nix flake check`, because nothing in the check set built its
+`dist`.
+
+Confirmed by putting `const size: number = 'thirty-two'` in
+`packages/orphan/src/base32.ts`: `nix build .#test-orphan` passed,
+`nix build .#build-orphan` reported `TS2322`. The build derivations are now
+part of `nix flake check` too, which takes it from 39 checks to 59.
+
+So the complete story needs three checks, because "is the cache still valid?"
+has three parts:
+
+| question | check | derived from |
+|---|---|---|
+| is every project represented? | `graphAgreement` | the manifests, via `readDir` |
+| are the declared edges the ones in the table? | `graphAgreement` | the manifests |
+| are the declared edges the ones the source imports? | `build-*` | pnpm-strict resolution and `tsc` |
+| is every test file represented? | `guard-*` | Vitest's own enumeration |
+
 This generalises: **any scheme that transfers a work-list from one tool to
-another needs a check that the list is still complete**, and the check has to
-be adversarial rather than derived from the same source as the list.
+another needs a check that the list is still complete**, and the check has to be
+adversarial rather than derived from the same source as the list.
+
+## A tsconfig is a manifest; a Vitest config is a program
+
+The build and test derivations started with the same kind of hand-written
+fileset: name `src`, `tests`, `package.json`, `tsconfig.json` and
+`vitest.config.ts`, and nothing else can invalidate this target. For the build
+that is sound, because a tsconfig *states* which files `tsc` reads.
+
+For the test it was an assumption, and it broke the first time it was tested.
+Giving `packages/orphan` a `setupFiles: ['./test-setup.ts']` entry — outside
+`tests/`, which is where a real repository often puts it — produced:
+
+```
+Error: Cannot find module '/build/source/packages/orphan/test-setup.ts'
+```
+
+A Vitest config is not a manifest. It is a program that can pull in setup files,
+global setup, fixtures, snapshot directories and custom reporters from anywhere
+under the project, and none of that is visible to whoever writes the fileset.
+The test derivations now take the whole project directory; the build derivations
+keep their precise fileset, because there the precision is justified.
+
+The cost is real and shows up in the matrix: the README row went from
+`nix invalidated 0` to `nix invalidated 1`. Nix now over-invalidates by one
+where Nx's hash correctly ignores the file. That is the honest trade, and the
+0 was never precision — it was an unsound guess that happened to hold.
+
+The general rule: **name inputs precisely only where the tool declares them.**
+Where the tool's configuration is arbitrary code, the directory is the input.
+
+## The section 17 cases
+
+The brief asks for deliberate correctness cases and says plainly that a
+conservative system running a little too much beats one that silently omits
+tests. `scripts/correctness-probes.mjs` breaks four things and records which
+mechanism notices; results in `results/correctness-probes.json`.
+
+| case | `build-orphan` | `test-orphan` | `graphAgreement` | Nx edge reported |
+|---|---|---|---|---|
+| imports a package its manifest does not declare | fails | fails | passes | **none** |
+| type error in code no test exercises | fails | **passes** | passes | — |
+| reaches into another package via a `tsconfig` `paths` alias | fails | fails | passes | **none** |
+| imports an uncommitted generated source file | fails | fails | passes | — |
+
+Every case fails loudly. None of them silently ran fewer tests, which is the
+outcome section 17 actually cares about. The type error is the one that would
+have slipped through before the build derivations joined the check set.
+
+Two results correct something asserted earlier in this document. The loose ends
+used to claim that path aliases and undeclared imports are "a place where Nx's
+resolution knowledge is worth more than it is here". **Nx reported no edge at
+all** in either case: not for the undeclared import, and not for the
+cross-package `tsconfig` `paths` alias. Nx's resolution runs through pnpm's
+strict layout, so an import that cannot resolve produces no edge rather than a
+detected-but-undeclared one. Nx is not smarter than the manifests here; it is
+reading the same thing.
+
+That also means the `unclassifiedNxEdges` field the bridge computes — Nx edges
+no manifest explains — stays empty not because the workspace is tidy but
+because Nx cannot produce such an edge in a pnpm-strict workspace. It is a
+guard against a case that may not be reachable, which is worth knowing before
+relying on it.
+
+The generated-source case is symmetric blindness: Nix's filesets come from the
+git tree and Nx's file index does too, so neither sees an uncommitted generated
+file, and the build fails loudly for both. A repository that generates sources
+would have to commit them or generate them inside the derivation.
 
 ## Cost
 
@@ -447,24 +572,20 @@ on two.
 The caveat: **the generated bridge is a cache of a semantic analysis, and stale
 caches are silent.** `nix/projects.json` is checked in. If a developer adds a
 dependency or a test file and does not regenerate it, Nix builds a graph that no
-longer matches the code — and the failure direction is "ran fewer tests, all
-green". The guard derivations close this for test files. Nothing in this
-prototype closes it for dependency edges, and that is the first thing to build
-next: the same adversarial check, applied to the graph rather than the file
-list. Because pnpm's strict `node_modules` layout makes an undeclared import a
-hard resolution error, most of that check can be `nix build` of every package,
-which is already in `nix flake check`.
+longer matches the code, and the failure direction is "ran fewer tests, all
+green". Closing that is what the guards are for, and it takes three separate
+checks because the question has three parts.
 
 ## Loose ends
 
 - Evaluation cost at 100–300 packages and thousands of derivations is untested;
-  everything here is at 19 projects.
-- A staleness guard for the dependency edges, matching the one for test files.
+  everything here is at 19 projects. This is the main thing scale would tell us.
 - Content-addressed derivations were not tried. Eval-time reduction removed the
-  motivating case, but `__contentAddressed` would give early cutoff for build
-  outputs too, where a comment-only source edit currently rebuilds all
-  dependents.
-- Path aliases, `exports` subpaths, generated sources and Vitest `setupFiles`
-  are all listed in the brief and are not represented in this workspace. Each
-  is a place where Nx's resolution knowledge is worth more than it is here, and
-  where a hand-written fileset is more likely to be wrong.
+  motivating case for the install, but `__contentAddressed` would give early
+  cutoff for build outputs too, where a comment-only source edit currently
+  rebuilds every dependent's tests even though `tsc`'s output is unchanged.
+- The ~1.23 s fixed cost per Nix derivation is the thing to attack before
+  adding any more derivations. Each one rebuilds the workspace skeleton from
+  scratch; sharing it is untried.
+- Prototype 4 (the Nx task graph becoming Nix derivations) is argued against
+  below from the shape of the data rather than measured. It was never built.
