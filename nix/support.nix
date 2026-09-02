@@ -1,6 +1,6 @@
-# Machinery shared by the per-package and per-test-file prototypes: how a
-# workspace skeleton is assembled around one package, and how a Vitest run is
-# turned into a deterministic output.
+# Machinery shared by the per-package and per-test-file derivations: how a
+# workspace tree is assembled around one package, and how Vitest is run inside
+# it.
 { lib
 , workspace
 }:
@@ -27,26 +27,31 @@ rec {
 
   projectPath = project: suffix: repoRoot + "/${project.root}/${suffix}";
 
-  toSource = name: fileset: lib.fileset.toSource
-    {
-      root = repoRoot;
-      inherit fileset;
-    } // { inherit name; };
+  # The store path is always named "source"; lib.fileset.toSource offers no way
+  # to name it, so do not thread a name through in the hope that it will.
+  toSource = fileset: lib.fileset.toSource {
+    root = repoRoot;
+    inherit fileset;
+  };
 
   # Node resolves a bare specifier by walking up from the *importing* file, so a
   # dependency's store path can only satisfy its own imports if it carries its
   # own node_modules. Giving every build output one makes each store path a
   # self-contained runtime closure, and makes Nix's recorded references match
   # the package graph.
+  # Each dependency is linked under its real package name, scope included, so
+  # nothing here assumes a particular npm scope or that packages are scoped at
+  # all.
   linkDepsInto = builds: dir: deps: lib.concatMapStringsSep "\n"
-    (dep: "ln -sfn ${builds.${dep}} ${dir}/node_modules/@nx-exp/${dep}")
+    (dep: ''
+      mkdir -p "$(dirname ${dir}/node_modules/${table.projects.${dep}.name})"
+      ln -sfn ${builds.${dep}} ${dir}/node_modules/${table.projects.${dep}.name}
+    '')
     deps;
 
   prepareTree = builds: project: deps: ''
     export HOME=$TMPDIR
-    export CI=true
     ln -s ${workspace.nodeModules}/node_modules ./node_modules
-    mkdir -p ${project.root}/node_modules/@nx-exp
     ${linkDepsInto builds project.root deps}
   '';
 

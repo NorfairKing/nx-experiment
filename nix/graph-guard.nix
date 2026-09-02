@@ -36,10 +36,7 @@ in
 stdenvNoCC.mkDerivation {
   name = "nx-exp-workspace-projects";
 
-  src = lib.fileset.toSource {
-    root = repoRoot;
-    fileset = everyManifest;
-  };
+  src = support.toSource everyManifest;
 
   nativeBuildInputs = [ nodejs pnpm ];
   dontPatchELF = true;

@@ -42,7 +42,7 @@ let
 
   mkBuild = attr: project: stdenvNoCC.mkDerivation {
     name = "nx-exp-${attr}-dist";
-    src = toSource "nx-exp-${attr}-build-src" (buildFileset project);
+    src = toSource (buildFileset project);
     nativeBuildInputs = [ nodejs ];
     dontPatchELF = true;
     dontStrip = true;
@@ -62,7 +62,7 @@ let
     installPhase = ''
       runHook preInstall
 
-      mkdir -p $out/node_modules/@nx-exp
+      mkdir -p $out
       cp package.json $out/package.json
       cp -r dist $out/dist
       # Declaration maps let an editor jump from a .d.ts to the .ts it came
@@ -85,7 +85,7 @@ let
   # the packages that use it.
   mkTest = attr: project: stdenvNoCC.mkDerivation {
     name = "nx-exp-${attr}-test";
-    src = toSource "nx-exp-${attr}-test-src" (testFileset project);
+    src = toSource (testFileset project);
     nativeBuildInputs = [ nodejs ];
     dontPatchELF = true;
     dontStrip = true;
@@ -93,6 +93,7 @@ let
     buildPhase = ''
       runHook preBuild
 
+      export CI=true
       ${prepareTree builds project (project.runtimeDeps ++ project.devDeps)}
       ${runVitest project ""}
 

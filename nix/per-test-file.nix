@@ -52,7 +52,7 @@ let
     in
     stdenvNoCC.mkDerivation {
       name = "nx-exp-${attrFor attr testFile}-test";
-      src = toSource "nx-exp-${attrFor attr testFile}-src" fileset;
+      src = toSource fileset;
       nativeBuildInputs = [ nodejs ];
       dontPatchELF = true;
       dontStrip = true;
@@ -60,6 +60,7 @@ let
       buildPhase = ''
         runHook preBuild
 
+        export CI=true
         ${prepareTree builds project (project.runtimeDeps ++ project.devDeps)}
         ${runVitest project testFile}
 
@@ -79,7 +80,7 @@ let
   # problem.
   mkGuard = builds: attr: project: stdenvNoCC.mkDerivation {
     name = "nx-exp-${attr}-test-enumeration";
-    src = toSource "nx-exp-${attr}-enumeration-src" (lib.fileset.unions
+    src = toSource (lib.fileset.unions
       (sharedTestFiles ++ [ (repoRoot + "/${project.root}") ]));
     nativeBuildInputs = [ nodejs ];
     dontPatchELF = true;
@@ -90,6 +91,7 @@ let
     buildPhase = ''
       runHook preBuild
 
+      export CI=true
       ${prepareTree builds project (project.runtimeDeps ++ project.devDeps)}
 
       vitest=$PWD/node_modules/.bin/vitest
