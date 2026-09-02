@@ -104,6 +104,31 @@ where the distinction was already discarded. The fix is not in Nx's graph but
 in the bridge: `scripts/nx-to-nix.mjs` re-reads the manifests to recover the
 split. That is a one-line-per-project lookup, not an analysis.
 
+### One named input Nx shares between tools that do not share it
+
+Every package's `tsconfig.json` extends `tsconfig.base.json`, and every
+package's `vitest.config.ts` merges `vitest.shared.ts`. Neither tool reads the
+other's file: `tsc` has never heard of the Vitest config.
+
+Nx's `sharedGlobals` is one list, handed to whatever named input references it,
+so both files are inputs to both the build and the test target. Editing
+`vitest.shared.ts` rehashes **all 14** build tasks in the task graph as well as
+all 19 test tasks. The 14 is not a subset chosen for relevance — it is simply
+how many projects have a dependant, and so have a `build` task in the graph at
+all.
+
+Nix invalidates **19 test derivations and 0 build derivations**, because the
+build fileset and the test fileset name different workspace-root files. The
+`results/change-matrix.json` row reads `shared-vitest-config: tests 19,
+builds 0` against `nxRehashedBuilds 14`.
+
+This is fixable in Nx — two named inputs instead of one shared list — so it is
+a default worth knowing rather than a limitation. But it is the same shape as
+the two below: the grouping is a thing somebody has to declare correctly, and
+the natural declaration is coarser than the truth. This experiment had the bug
+too, and only found it when a Vitest-config edit turned out to be rebuilding
+every `tsc` output.
+
 ### Two inputs Nx's named inputs miss
 
 **`pnpm-workspace.yaml` is not an input to anything.** Editing it changes 0 Nx
