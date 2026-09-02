@@ -39,12 +39,17 @@ const attrsWithPrefix = (prefix) =>
 
 const buildAll = (attrs) => run('nix', ['build', '--no-link', ...attrs.map((a) => `.#${a}`)])
 
-// An output referenced by another store path cannot be deleted, and the
-// aggregate allTests derivation references every per-package test output, so
-// deleting is not a reliable way to force real work. --rebuild does the work
-// again regardless of what is already in the store.
-const rebuildAll = (attrs) =>
-  run('nix', ['build', '--rebuild', '--no-link', ...attrs.map((a) => `.#${a}`)])
+// A test run is not reproducible, so --rebuild cannot be used to force real
+// work. Cold timing deletes the outputs instead. The aggregate allTests
+// derivation references every per-package test output and has to go first, or
+// those deletions are refused.
+const outPathsOf = (attrs) =>
+  run('nix', ['path-info', ...attrs.map((a) => `.#${a}`)]).split('\n').filter(Boolean)
+
+const deleteOutputs = (paths) => {
+  const remaining = run('nix', ['store', 'delete', ...paths, '--json'])
+  return JSON.parse(remaining)
+}
 
 const NIX_LEVELS = [
   { id: 'per-package', prefix: 'test-' },
@@ -54,14 +59,23 @@ const NIX_LEVELS = [
 
 const results = { nix: {}, nx: {} }
 
+// allTests pins every per-package test output; drop it before deleting.
+try {
+  deleteOutputs(outPathsOf(['allTests']))
+} catch {
+  // Not built yet, nothing to drop.
+}
+
 for (const level of NIX_LEVELS) {
   const attrs = attrsWithPrefix(level.prefix)
   buildAll(attrs)
+  deleteOutputs(outPathsOf(attrs))
   results.nix[level.id] = {
     derivations: attrs.length,
-    rebuildMs: time(`nix ${level.id} (rebuild)`, () => rebuildAll(attrs)),
+    coldMs: time(`nix ${level.id} (cold)`, () => buildAll(attrs)),
     cachedMs: time(`nix ${level.id} (cached)`, () => buildAll(attrs)),
   }
+  deleteOutputs(outPathsOf(attrs))
 }
 
 run('pnpm', ['exec', 'nx', 'reset'])

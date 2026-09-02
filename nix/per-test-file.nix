@@ -24,7 +24,7 @@
 }:
 let
   inherit (support) table projectPath sharedFiles toSource prepareTree
-    runVitest installSummary;
+    runVitest installLog;
 
   ownFiles = project: [
     (projectPath project "package.json")
@@ -62,7 +62,7 @@ let
 
       installPhase = ''
         runHook preInstall
-        ${installSummary}
+        ${installLog}
         runHook postInstall
       '';
     };
@@ -97,7 +97,7 @@ let
 
     installPhase = ''
       runHook preInstall
-      ${installSummary}
+      ${installLog}
       runHook postInstall
     '';
   };

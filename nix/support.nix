@@ -2,7 +2,6 @@
 # workspace skeleton is assembled around one package, and how a Vitest run is
 # turned into a deterministic output.
 { lib
-, writeText
 , workspace
 }:
 rec {
@@ -42,49 +41,22 @@ rec {
     ${linkDepsInto builds project.root deps}
   '';
 
-  # Vitest's own output carries a wall-clock start time and per-file durations,
-  # so storing it verbatim makes the derivation non-reproducible, which defeats
-  # `nix build --rebuild` and any content-addressed early cutoff. The summary
-  # keeps which files ran and how many assertions passed, and drops the timing.
-  normalizeLog = writeText "normalize-vitest-log.mjs" ''
-    import { readFileSync } from 'node:fs'
-
-    const plain = readFileSync(process.argv[2], 'utf8').replace(
-      /\x1b\[[0-9;]*m/g,
-      "",
-    )
-
-    const outcomes = []
-    const totals = []
-    for (const line of plain.split("\n")) {
-      // A result line is "<mark> <project label> <file> (<n> tests) <duration>";
-      // the lazy prefix skips the label so the file is the token before the count.
-      const outcome = line.match(/^\s*([✓×↓])\s+.*?(\S+)\s+\((\d+) tests?\)/)
-      if (outcome) {
-        outcomes.push(outcome[1] + " " + outcome[2] + " (" + outcome[3] + " tests)")
-        continue
-      }
-      const total = line.match(/^\s*(Test Files|Tests)\s+(.*?)\s*$/)
-      if (total) totals.push(total[1] + " " + total[2])
-    }
-
-    process.stdout.write([...outcomes.sort(), ...totals].join("\n") + "\n")
-  '';
-
-  # Runs Vitest from the project directory and records a deterministic summary.
+  # A test run is not reproducible and does not need to be: the derivation
+  # succeeding is the evidence that the tests passed, and nothing consumes the
+  # log's content. `nix build --rebuild` therefore does not apply to these
+  # derivations.
+  #
   # Without pipefail the exit status would be tee's, so a failing test would
   # still produce a successful derivation.
   runVitest = project: files: ''
     vitest=$PWD/node_modules/.bin/vitest
-    node_bin=$(command -v node)
     cd ${project.root}
     set -o pipefail
     "$vitest" run ${files} --reporter=default 2>&1 | tee $TMPDIR/test.log
-    "$node_bin" ${normalizeLog} $TMPDIR/test.log > $TMPDIR/summary
   '';
 
-  installSummary = ''
+  installLog = ''
     mkdir -p $out
-    cp $TMPDIR/summary $out/summary
+    cp $TMPDIR/test.log $out/test.log
   '';
 }

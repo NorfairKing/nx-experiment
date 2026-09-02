@@ -11,7 +11,7 @@
 }:
 let
   inherit (support) table projectPath sharedFiles toSource prepareTree
-    linkDepsInto runVitest installSummary;
+    linkDepsInto runVitest installLog;
 
   # The build reads the manifest, the tsconfig and src; not tests, not the
   # vitest config, not the README.
@@ -84,7 +84,7 @@ let
 
     installPhase = ''
       runHook preInstall
-      ${installSummary}
+      ${installLog}
       runHook postInstall
     '';
   };
@@ -104,7 +104,7 @@ in
     installPhase = ''
       mkdir -p $out
       ${lib.concatMapStringsSep "\n"
-        (attr: "cp ${tests.${attr}}/summary $out/${attr}.summary")
+        (attr: "cp ${tests.${attr}}/test.log $out/${attr}.log")
         (lib.attrNames tests)}
     '';
   };
