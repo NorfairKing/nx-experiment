@@ -2,10 +2,10 @@ final: _prev: {
   nxExperiment =
     let
       workspace = final.callPackage ./workspace.nix { };
-      perPackage = final.callPackage ./per-package.nix { inherit workspace; };
-      perTestFile = final.callPackage ./per-test-file.nix { inherit workspace; } {
-        inherit (perPackage) builds;
-      };
+      support = final.callPackage ./support.nix { inherit workspace; };
+      perPackage = final.callPackage ./per-package.nix { inherit support; };
+      perTestFile = final.callPackage ./per-test-file.nix { inherit support; }
+        perPackage.builds;
     in
     {
       inherit (workspace) installInputs wholeManifests pnpmDeps nodeModules;

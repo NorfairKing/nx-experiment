@@ -7,21 +7,11 @@
 { lib
 , stdenvNoCC
 , nodejs
-, workspace
+, support
 }:
 let
-  repoRoot = ../.;
-
-  table = builtins.fromJSON (builtins.readFile ./projects.json);
-
-  # Read by every tsc and vitest invocation through a relative path, so every
-  # derivation legitimately depends on them.
-  sharedFiles = [
-    (repoRoot + "/tsconfig.base.json")
-    (repoRoot + "/vitest.shared.ts")
-  ];
-
-  projectPath = project: suffix: repoRoot + "/${project.root}/${suffix}";
+  inherit (support) table projectPath sharedFiles toSource prepareTree
+    linkDepsInto runVitest installSummary;
 
   # The build reads the manifest, the tsconfig and src; not tests, not the
   # vitest config, not the README.
@@ -40,28 +30,6 @@ let
     (projectPath project "vitest.config.ts")
   ]);
 
-  toSource = name: fileset: lib.fileset.toSource
-    {
-      root = repoRoot;
-      inherit fileset;
-    } // { inherit name; };
-
-  # Node resolves a bare specifier by walking up from the *importing* file, so a
-  # dependency's store path can only satisfy its own imports if it carries its
-  # own node_modules. Giving every build output one makes each store path a
-  # self-contained runtime closure, and makes Nix's recorded references match
-  # the package graph.
-  linkDepsInto = dir: deps: lib.concatMapStringsSep "\n"
-    (dep: ''ln -sfn ${builds.${dep}} ${dir}/node_modules/@nx-exp/${dep}'')
-    deps;
-
-  prepareTree = project: deps: ''
-    export HOME=$TMPDIR
-    ln -s ${workspace.nodeModules}/node_modules ./node_modules
-    mkdir -p ${project.root}/node_modules/@nx-exp
-    ${linkDepsInto project.root deps}
-  '';
-
   mkBuild = attr: project: stdenvNoCC.mkDerivation {
     name = "nx-exp-${attr}-dist";
     src = toSource "nx-exp-${attr}-build-src" (buildFileset project);
@@ -72,7 +40,7 @@ let
     buildPhase = ''
       runHook preBuild
 
-      ${prepareTree project project.runtimeDeps}
+      ${prepareTree builds project project.runtimeDeps}
 
       tsc=$PWD/node_modules/.bin/tsc
       cd ${project.root}
@@ -87,7 +55,7 @@ let
       mkdir -p $out/node_modules/@nx-exp
       cp package.json $out/package.json
       cp -r dist $out/dist
-      ${linkDepsInto "$out" project.runtimeDeps}
+      ${linkDepsInto builds "$out" project.runtimeDeps}
 
       runHook postInstall
     '';
@@ -95,7 +63,9 @@ let
 
   # Tests run against the package's own sources and its dependencies' built
   # outputs, so a package's test does not depend on its own build at all.
-  # Dev dependencies are edges of the test derivation only.
+  # Dev dependencies are edges of the test derivation only, which is why a
+  # change to a test-only package does not invalidate anything downstream of
+  # the packages that use it.
   mkTest = attr: project: stdenvNoCC.mkDerivation {
     name = "nx-exp-${attr}-test";
     src = toSource "nx-exp-${attr}-test-src" (testFileset project);
@@ -106,25 +76,15 @@ let
     buildPhase = ''
       runHook preBuild
 
-      export CI=true
-      ${prepareTree project (project.runtimeDeps ++ project.devDeps)}
-
-      vitest=$PWD/node_modules/.bin/vitest
-      cd ${project.root}
-      # Without pipefail the exit status would be tee's, so a failing test
-      # would still produce a successful derivation.
-      set -o pipefail
-      "$vitest" run --reporter=default 2>&1 | tee $TMPDIR/test.log
+      ${prepareTree builds project (project.runtimeDeps ++ project.devDeps)}
+      ${runVitest project ""}
 
       runHook postBuild
     '';
 
     installPhase = ''
       runHook preInstall
-
-      mkdir -p $out
-      cp $TMPDIR/test.log $out/test.log
-
+      ${installSummary}
       runHook postInstall
     '';
   };
@@ -134,7 +94,6 @@ let
 in
 {
   inherit builds tests;
-
   inherit (table) projects;
 
   # Everything at once, for the "run all tests" baseline.
@@ -145,7 +104,7 @@ in
     installPhase = ''
       mkdir -p $out
       ${lib.concatMapStringsSep "\n"
-        (attr: "cp ${tests.${attr}}/test.log $out/${attr}.log")
+        (attr: "cp ${tests.${attr}}/summary $out/${attr}.summary")
         (lib.attrNames tests)}
     '';
   };
