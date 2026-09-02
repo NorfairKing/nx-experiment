@@ -31,7 +31,7 @@
       packages.${system} =
         {
           inherit (nxExperiment)
-            installInputs pnpmDeps nodeModules allTests;
+            installInputs pnpmDeps nodeModules allTests graphAgreement;
         }
         # Prototype 1 and 2: one derivation per package.
         // prefixed "build" nxExperiment.builds
@@ -50,11 +50,19 @@
             deadnix.enable = true;
           };
         };
+
+        # nix/projects.json is a checked-in cache of a semantic analysis, and a
+        # project missing from it silently gets no derivation at all.
+        inherit (nxExperiment) graphAgreement;
       }
-      # Every package's tests, and the check that the per-test-file
-      # enumeration still matches what Vitest itself discovers.
+      # Every package's tests, and the check that the per-test-file enumeration
+      # still matches what Vitest itself discovers.
       // prefixed "test" nxExperiment.tests
-      // prefixed "guard" nxExperiment.guards;
+      // prefixed "guard" nxExperiment.guards
+      # A package's tests do not depend on that package's own build, so without
+      # this a leaf package with no dependants is never typechecked at all and
+      # an undeclared import in it would go unnoticed.
+      // prefixed "build" nxExperiment.builds;
 
       devShells.${system}.default = pkgs.mkShell {
         name = "nx-experiment-shell";
