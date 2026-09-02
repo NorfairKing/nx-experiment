@@ -35,10 +35,10 @@ disabled. It is deployment policy, not part of the question.
 per-package `tsc` derivations, 19 test-file enumeration guards, the
 graph-agreement guard, and the formatters. Working tree clean.
 
-**The commits are not pushed.** Authorisation was asked for twice and never
-given. Do not push without being told to.
+**The commits are pushed to master.** That was authorised late in the
+experiment; CI is the feedback loop that matters.
 
-The workspace is 19 projects (16 packages, 3 apps), 27 test files, 128
+The workspace is 19 projects (16 packages, 3 apps), 27 test files, 129
 assertions, hand-written and shaped for the dependency cases: a heavily shared
 foundation (`core`), a diamond with a chord (`tokens` → {`lexer`, `ast`} →
 `parser`, plus `parser` → `tokens`), fan-ins (`compiler`, `runtime`), an
@@ -53,16 +53,26 @@ packages, no generator. That deferral is now spent — see the plan below.
 All numbers are backed by committed `results/`. If you change something that
 moves a number, update the prose that cites it.
 
-**The verdict.** Architecture C: the Nx project graph becomes the Nix graph, Nx
-absent at execution time. Per-package granularity, with per-test-file only
-where one package's test files are unevenly slow.
+**The verdict.** Architecture A: Nix alone. For a pnpm workspace with isolated
+linking, Nx is not needed at all — not even offline. Per-package granularity,
+with per-test-file only where one package's test files are unevenly slow.
 
-**The bridge is 69 lines and needs no Nx internals.** `nx graph --file` carries
-project roots, dependency edges, target inputs, and the atomizer's
-per-test-file target names. `scripts/nx-to-nix.mjs` distils it into
-`nix/projects.json`. (`scripts/dump-nx.mjs` does reach into `nx/src/...`
-internals, but only to measure Nx's task hashes and inputs for the comparison;
-nothing built depends on it.)
+**Nx knows dependencies at exactly one level**, project to project, derived
+from the manifests. `results/nx-dependency-levels.json`: of 126 tracked files,
+16 carry dependency information and all 16 are `package.json`; none of the 88
+TypeScript files carries any. `nix/graph.nix` derives the same graph during
+evaluation and produces byte-identical derivation paths at the same evaluation
+cost.
+
+**The bridge survives as an optional override**, for a workspace where the
+manifests stop being the graph. `scripts/nx-to-nix.mjs` (69 lines, no Nx
+internals) writes a table to `nix/projects.json`, which `nix/graph.nix` picks
+up if present. (`scripts/dump-nx.mjs` does reach into `nx/src/...` internals,
+but only to measure Nx's task hashes for the comparison; nothing built depends
+on it.)
+
+**Evaluation is flat in project count.** 107 ms at 24 projects, 148 ms at 389,
+with all derivations forced. Criterion 2 is satisfied to at least 400 projects.
 
 **The two models agree on 11 of 13 change classes.** Both divergences favour
 Nix: a dev-only dependency edge (Nix 4, Nx 8 — Nx's graph reports
@@ -130,6 +140,9 @@ exists to protect.
 
 ## Repo-specific traps
 
+- **The commits are pushed now.** Authorisation was given late; CI at
+  https://staging.nix-ci.com/gh:NorfairKing:nx-experiment/master is the real
+  feedback loop and matters more than local `nix flake check`.
 - **`results/` is only tracked because `.gitignore` has an explicit
   `!results/`.** A global gitignore carrying the Nix convention as `result*`
   rather than `result` swallows the whole directory. It did, for most of this
@@ -154,26 +167,21 @@ exists to protect.
 
 ## What is open
 
-1. **Evaluation cost at scale.** The one thing that could still change the
-   verdict. Evaluation is ~0.6 s per invocation and roughly half the per-unit
-   cost at 19 projects, and flat across granularities. If it is linear in
-   project count, then at 300 packages it is ~10 s per `nix build` and the
-   approach gets uncomfortable. Nothing else in this list can move the
-   recommendation.
-2. Content-addressed derivations, blocked by the daemon (above).
-3. Prototype 4, the Nx task graph becoming Nix derivations, is argued from the
+1. Content-addressed derivations, blocked by the daemon (above).
+2. Prototype 4, the Nx task graph becoming Nix derivations, is argued from the
    shape of the data and labelled as such, but never built. With one build and
    one test target per project this workspace's task graph is nearly its project
    graph relabelled, so there is little room for a gain.
-4. A from-source build including the toolchain: deliberately not measured. It
+3. A from-source build including the toolchain: deliberately not measured. It
    would be dominated by populating a throwaway store with Node, stdenv and the
    341-package pnpm closure, none of which is the question. The "every unit
    rebuilt" row already answers the useful version.
 
 ## The plan
 
-In [PLAN.md](PLAN.md). In short: the remaining question is a scaling question,
-so generate workspaces at 25 to 300 projects into a gitignored `scale/`, and
-measure Nix evaluation time against project count. That is answerable with
-`nix eval` alone, no builds and no store mutation, and it decides whether
-architecture C holds at size.
+In [PLAN.md](PLAN.md): what to do when the real repository is available. Phase
+0 is the preconditions check, which decides whether Nx is needed at all.
+
+The scaling question that used to be the plan is answered — evaluation is flat
+to 400 projects, see FINDINGS.md — and `scripts/measure-scale.mjs` reproduces
+it.

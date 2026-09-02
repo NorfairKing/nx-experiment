@@ -3,7 +3,7 @@
 What Nx knows that Nix does not, which of it is worth moving across, and where
 the two dependency models stop composing.
 
-The workspace is 19 projects (16 packages, 3 apps), 27 test files, 128
+The workspace is 19 projects (16 packages, 3 apps), 27 test files, 129
 assertions, shaped to contain a heavily shared foundation, a diamond, several
 fan-ins, an isolated four-deep chain and an orphan. Small enough to check every
 number by hand, which is the point at this stage: these are conclusions about
@@ -12,9 +12,36 @@ scripts in `scripts/`; the numbers come from `results/`.
 
 ## The headline
 
-Once both sides are configured carefully, **Nx's affected calculation and Nix's
-derivation model agree almost everywhere**, and the interesting content of the
-experiment is the handful of places they disagree and why.
+**For a pnpm workspace with isolated linking, Nix does not need Nx.**
+
+That is not where this experiment expected to land. The premise was that Nx had
+done expensive semantic analysis worth importing, and the question was how to
+get it into Nix. Measurement says there is nothing to import:
+
+- Nx knows dependencies at **exactly one level**, project to project, and
+  derives them from the manifests. Of the 126 files it tracks, 16 carry
+  dependency information and all 16 are `package.json`; none of the 88
+  TypeScript files carries any (`results/nx-dependency-levels.json`).
+- Nix can read those same manifests during evaluation. Doing so produces a
+  **byte-identical set of derivation paths** — all 38 — at the same evaluation
+  cost, with no generated file to keep in sync and no import-from-derivation.
+- Evaluation stays flat to 400 projects: 16× the projects for 1.4× the
+  evaluation time.
+
+The reason the manifests suffice is pnpm's isolated linking: an import of an
+undeclared workspace package does not resolve, so it is a hard build error
+rather than a missing edge. Nx reports no edge for one either. Under a hoisted
+layout, or where edges come from `tsconfig` path aliases, that stops being true
+and Nx's analysis earns its place — hence the preconditions below.
+
+The one thing Nx supplies that manifests cannot is the **per-test-file split**,
+which it gets by asking Vitest. That is worth having only where a package's
+test files are unevenly slow.
+
+The rest of this document is the evidence, and the parts of it that were wrong
+along the way.
+
+### The two models compared
 
 Of 13 classes of change, Nx's task hashes and Nix's derivation paths select the
 same set of tests in 11. In the two disagreements, Nix is right both times, for
@@ -34,7 +61,7 @@ two different reasons:
 | the lockfile | 19 | 19 | 19 |
 | a dead field of the root manifest | 0 | 0 | 0 |
 | **pnpm-workspace.yaml** | **0** | **0** | **19** |
-| a new README | 1 | 0 | 0 |
+| a new README | 1 | 0 | 1 |
 
 (19 test derivations / 19 test tasks. Full data in `results/change-matrix.json`.)
 
@@ -56,19 +83,44 @@ affectedness decides what gets scheduled, the hash decides what gets run.
 
 ## What Nx knows that Nix cannot cheaply obtain
 
-1. **Which package a TypeScript import resolves to.** This is the whole reason
-   the bridge is worth anything. Nix has no idea that
-   `import { hashHex } from '@nx-exp/core'` inside `packages/strings/src/slug.ts`
-   is an edge. Recomputing it in Nix would mean reimplementing module
-   resolution, `exports` maps, path aliases and pnpm's linking rules.
+Short list, and it got shorter as the experiment went on. **The per-test-file
+split** is the only entry: Nx enumerates a project's test files by asking
+Vitest, and no amount of reading manifests recovers that.
 
-2. **The set of test files Vitest would run**, including the atomizer's
-   per-file task split, without booting Vitest per project.
+### The retraction
 
-3. **Which target depends on which**, and the inputs each target declares.
+An earlier draft's first entry was "which package a TypeScript import resolves
+to", described as "the whole reason the bridge is worth anything", on the
+grounds that recomputing it in Nix would mean reimplementing module resolution,
+`exports` maps, path aliases and pnpm's linking rules.
 
-Everything else Nx knows about *this* workspace turned out to be derivable from
-the manifests directly, which matters for how much machinery the bridge needs.
+That was wrong, and wrong in an interesting way. Nix never has to resolve the
+import, because in a pnpm workspace **Nx does not resolve it either.** Nx reads
+the manifest. `results/nx-dependency-levels.json`: every one of the 16
+dependency-carrying files in its file map is a `package.json`, and none of the
+88 TypeScript files carries a single edge. The `deps` field exists in Nx's
+model — the data structure would support file-level edges — and it is empty
+throughout.
+
+Two probes make the same point from the other side
+(`results/correctness-probes.json`). An undeclared import of a workspace
+package: Nx reports **no edge**. A cross-package `tsconfig` `paths` alias: Nx
+reports **no edge**. Both fail the build loudly instead, because pnpm's
+isolated `node_modules` never linked the package. Nx's resolution runs through
+that same layout, so an import it cannot resolve produces nothing rather than a
+detected-but-undeclared edge.
+
+The lesson generalises past Nx: **before building a bridge to import another
+tool's analysis, check that the analysis exists.** The field being present in
+the schema is not the same as the field being populated, and one `jq` query
+would have saved a day's work.
+
+### What Nx also knows, that is not analysis
+
+- **Which target depends on which**, and the inputs each target declares. This
+  is configuration, read back — `nx.json` says it, and so could a flake.
+- **External npm dependencies**, 400 of them here. Lockfile-derived, and Nix
+  already consumes the lockfile through the pnpm fixed-output derivation.
 
 ## What Nx does not know, or loses
 
@@ -639,16 +691,31 @@ It is slower for one isolated unit, 1.20 s against 0.88 s, and that gap is the
 one to care about, because it is what an editor-driven inner loop hits. Half of
 it is Nix evaluation rather than work.
 
-## How hard is the transfer
+## How hard is the transfer, if you need one
 
-Small, and that is a genuine finding: the bridge is 69 lines.
+On a pnpm workspace with isolated linking you do not: `nix/graph.nix` reads the
+manifests during evaluation and that is the whole mechanism. This section is
+for the case where a precondition fails and Nx's answer really does have to
+reach the evaluator.
+
+It is small — 69 lines:
 
 - `nx graph --file` exports the graph.
-- `scripts/nx-to-nix.mjs` (69 lines) reduces it to `nix/projects.json`: per
-  project, its root, its runtime and dev dependencies, and its test files.
-- `nix/per-package.nix` and `nix/per-test-file.nix` read that file.
+- `scripts/nx-to-nix.mjs` reduces it to a table: per project, its root, its
+  runtime and dev dependencies, and its test files.
+- Dropping that table at `nix/projects.json` switches `nix/graph.nix` to it
+  with no other change. Every derivation path comes out identical to the
+  manifest-derived ones, which is how the two were shown to be equivalent in
+  the first place.
 
-And it needs no Nx internals. The documented export
+There is a third option, which this repo does not need and so does not pay
+for: **import-from-derivation** — run Nx inside a derivation and import the
+result. That keeps the answer always fresh, at the cost of a build during
+evaluation, and it is unavailable wherever restricted evaluation is in force.
+The generated-table route is the same information with the freshness traded for
+a file somebody has to regenerate, which is what the guards then have to check.
+
+And none of it needs Nx internals. The documented export
 
 ```bash
 nx graph --file=results/nx-graph-export.json
@@ -684,73 +751,229 @@ dependency distinction, which comes from the manifests.
 
 ## The architectures
 
-**A. Nix alone.** Viable but you pay for it. Nix cannot find the import edges,
-so they have to come from somewhere; deriving them from `package.json`
-`dependencies` alone gets the package graph but not which *files* participate,
-so source filesets stay at directory granularity. Correct, and coarser.
+**A. Nix alone.** *The recommendation, for a pnpm workspace with isolated
+linking.* An earlier draft of this document dismissed A as "viable but you pay
+for it… correct, and coarser", on the assumption that Nix could not find the
+import edges and that filesets would have to stay at directory granularity.
+Both halves of that turned out to be wrong:
 
-**B. `nx affected` selects Nix derivations.** The simplest thing that works,
-and it is worth having on day one. But it is strictly worse than C: it keeps Nx
-in the execution path, inherits Nx's project-level over-selection, and gets
-nothing that Nix's own invalidation would not have got, since the Nix
-derivations already encode the graph. Useful as a fast pre-filter, not as the
-mechanism.
+- **The edges are in the manifests.** `nix/graph.nix` derives the whole project
+  graph during evaluation with `readDir` and `fromJSON`, and it produces a
+  *byte-identical* set of derivation paths to the generated table it replaced —
+  all 38 of them. It costs the same to evaluate, 200–207 ms either way.
+- **Directory granularity was not a cost.** For the test derivation it is the
+  *correct* input set, because a Vitest config is a program that can read
+  anything under the project. For the build derivation a precise fileset is
+  available and used, because a tsconfig declares what `tsc` reads.
 
-**C. The Nx project graph becomes the Nix graph.** This is the sweet spot. Nx
-runs once, at generation time, to produce `nix/projects.json`; after that Nix
-alone decides what to rebuild, and it decides correctly — including the
-dev-dependency case Nx itself gets wrong, and the `pnpm-workspace.yaml` case Nx
-misses. Nx is not needed at execution time at all.
+So A needs no Nx, no generated file, and no import-from-derivation, and gives
+up nothing measurable.
+
+**B. `nx affected` selects Nix derivations.** Rejected. It keeps Nx in the
+execution path and inherits Nx's project-level over-selection, which is coarser
+than Nx's own task hashing, let alone Nix's. The derivations already encode the
+graph, so the selection adds nothing. Worth restating because the original
+brief floated it: **use Nx's graph, not its affected calculation** — and it
+turns out you do not need either.
+
+**C. The Nx project graph becomes the Nix graph.** What this document
+recommended until the measurements above. Still the right answer *if* the
+manifests stop being the graph — see the preconditions below — and
+`nix/graph.nix` keeps it available as a one-file override, with
+`scripts/nx-to-nix.mjs` generating the table. Where it applies, prefer it to B
+for the same reasons: Nx runs once, offline, and never at execution time.
 
 **D. Nx tasks become Nix derivations.** *Not built, so this is an argument from
 the shape of the data rather than a measurement, and should be read as such.*
-The task graph carries two things C does not: `dependsOn` ordering, which C
-already recovers from the package graph, and the per-task inputs, which
-`results/input-comparison.json` shows to be less complete than the filesets
-written directly in Nix — they are the two entries Nx misses, the root manifest
-and `pnpm-workspace.yaml`. With one test target and one build target per
-project, this workspace's task graph is very nearly its project graph relabelled,
-so there is little room for a gain. Worth actually building for a workspace with
-several targets per project, where that stops being true.
+The task graph carries two things the project graph does not: `dependsOn`
+ordering, which is recoverable from the package graph, and the per-task inputs,
+which `results/input-comparison.json` shows to be *less* complete than filesets
+written directly in Nix — they miss the root manifest and `pnpm-workspace.yaml`.
+With one build and one test target per project, this workspace's task graph is
+very nearly its project graph relabelled. Worth actually building for a
+workspace with several targets per project, where that stops being true.
 
-**E. Nx test atoms become Nix derivations.** The one place Nx supplies something
-genuinely new — the per-file split, and past the Cloud gate. The cost is
-modest, 18% on rebuilding everything, and it barely improves invalidation, so
-it earns its place only where per-file parallelism buys something a
-package-level task cannot: a package whose test files differ a lot in runtime,
-so the slow ones stop queueing behind the fast ones. It also adds the
-enumeration hazard, so only with the guard in place — and if outputs are pushed
-to a binary cache, count the extra derivations, because a post-build upload
-hook charges roughly 2 s each.
+**E. Nx test atoms become Nix derivations.** The one place Nx supplies
+something genuinely not derivable from the manifests: the per-test-file split,
+which Nx gets by asking Vitest. It costs 18% on rebuilding everything and
+barely improves invalidation, so it earns its place only where per-file
+parallelism buys something a package-level task cannot — a package whose test
+files differ a lot in runtime, so the slow ones stop queueing behind the fast
+ones. It adds the enumeration hazard, so only with the guard in place. And if
+outputs are pushed to a binary cache, count the extra derivations: a
+post-build upload hook charges roughly 2 s each.
 
-**Verdict: C, with E where a package's test files are unevenly slow.** Take the
-project graph from Nx, recover the dev/runtime split from the manifests, build
-per-package derivations with filesets that are precise for `tsc` and
-whole-directory for Vitest, and reach for per-file derivations only where the
-parallelism pays.
+### Verdict
+
+**A, on a pnpm workspace with isolated linking. Reach for E only where a
+package's test files are unevenly slow, and for C only if a precondition below
+fails.**
+
+Concretely: derive the graph from the manifests during evaluation; one `tsc`
+derivation and one Vitest derivation per package; precise filesets for the
+build and the whole project directory for the test; recover the dev/runtime
+split from the manifest sections; give each build output its own
+`node_modules`; delete positional artifacts from outputs; and keep the three
+guards, because a graph Nix inferred is a graph that can silently go stale.
+
+Nx's remaining role in that recommendation is **nothing**, unless you want
+per-file atomization. That is a stronger claim than this document made a day
+ago, and it rests on `results/nx-dependency-levels.json`: of the 126 files Nx
+tracks, 16 carry dependency information and all 16 are `package.json`. None of
+the 88 TypeScript files carries any. In a pnpm workspace Nx knows dependencies
+at exactly one level, and derives them from the same manifests Nix can read
+directly.
+
+## Scale: evaluation is not the constraint
+
+Criterion 2 was "evaluates quickly", and evaluation was the one cost that
+plausibly grew with the workspace: it happens on every invocation, before any
+build. `scripts/measure-scale.mjs` generates synthetic workspaces with the same
+dependency shapes and times evaluation with every build and test derivation
+forced.
+
+| projects | derivations | evaluation (median) | ms per project |
+|---:|---:|---:|---:|
+| 24 | 48 | 107 ms | 4.5 |
+| 48 | 96 | 114 ms | 2.4 |
+| 97 | 194 | 116 ms | 1.2 |
+| 195 | 390 | 128 ms | 0.7 |
+| 389 | 778 | 148 ms | 0.4 |
+
+**Sixteen times the projects costs about 1.4× the evaluation.** Marginal cost
+is roughly 0.11 ms per project, and per-project cost falls by an order of
+magnitude across the range — the signature of a fixed cost dominating.
+
+Checked against the measurement mistakes this document has already made:
+forcing all 778 build and test derivation paths on a never-evaluated workspace
+takes 150 ms cold against 148 ms warm, so no evaluation cache is being
+measured; and forcing all 1950 attributes, including the per-test-file
+variants, takes 144 ms, the same within noise. The first evaluation of a given
+content also copies each project's fileset into the store, and that is the max
+column: 179 ms at 389 projects.
+
+Nothing is built or installed for this measurement. A fixed-output derivation's
+path depends only on its name and hash, so the pnpm dependency closure
+evaluates without being fetched.
+
+So evaluation is comfortable to at least 400 projects, and the thing to watch
+at that size is not evaluation but derivation count against whatever runs after
+it — a per-derivation post-build hook above all.
+
+## Preconditions: what this recipe assumes about a repository
+
+The recommendation above is conditional, and these are the conditions. Each has
+a check that takes one command, and a consequence if it fails.
+
+### 1. pnpm with isolated linking
+
+*Why it matters:* the whole case for architecture A is that the manifests are
+the graph. That holds because pnpm links only a package's declared
+dependencies, so an undeclared import does not resolve — it is a hard build
+error rather than a missing edge.
+
+*Check:* `pnpm config get node-linker` (and `nodeLinker` in
+`pnpm-workspace.yaml`). Expect `isolated`, the default.
+
+*If it fails:* under `hoisted`, phantom imports resolve, the manifests
+under-report, and Nix would generate a graph that is missing real edges —
+silently. Switch to architecture C: generate the table from Nx and drop it at
+`nix/projects.json`.
+
+### 2. Workspace edges come from package boundaries, not path aliases
+
+*Why it matters:* if a project reaches into another through a `tsconfig`
+`paths` alias rather than a dependency, no manifest records the edge.
+
+*Check:* `grep -r '"paths"' tsconfig*.json packages/*/tsconfig.json` and see
+whether any mapping points outside its own project.
+
+*If it fails:* the manifests are not the graph. Architecture C, and verify Nx
+actually reports those edges — in this workspace it reported *none* for a
+cross-package alias (`results/correctness-probes.json`), so confirm before
+relying on it.
+
+### 3. Tests import source, not the built output
+
+*Why it matters:* the test derivations here do not depend on their own
+package's build, which is a real precision win — but only because the tests
+import `../src/…` directly.
+
+*Check:* grep the test files for imports of the package's own name.
+
+*If it fails:* add the package's own build to its test derivation's inputs. Cost
+is one extra edge per package, no loss of correctness.
+
+### 4. One build and one test target per project
+
+*Why it matters:* it is what makes the task graph redundant with the project
+graph, and what keeps the derivation count at 2N.
+
+*Check:* `nx show project <name> --json | jq '.targets | keys'` on a few
+projects.
+
+*If it fails:* more targets per project is where architecture D might earn its
+place. It was never built here, so treat it as unexplored rather than rejected.
+
+### 5. No generated sources, or they are committed
+
+*Why it matters:* Nix's filesets come from the git tree, and so does Nx's file
+index. Neither sees an uncommitted generated file.
+
+*Check:* look for a codegen step in the build scripts.
+
+*If it fails:* either commit the generated sources or generate them inside the
+derivation. An uncommitted generated import fails loudly
+(`results/correctness-probes.json`), so this cannot pass silently — but it will
+stop the build.
+
+### 6. `tsc` is the builder
+
+*Why it matters:* the build derivations run `tsc -p tsconfig.json` and treat
+`dist/` as the output.
+
+*Check:* the `build` script in a package manifest.
+
+*If it fails:* substitute the real builder. Keep two things: the precise
+fileset, which is only justified while the builder declares its inputs, and
+the deletion of positional artifacts such as source maps, without which
+content-addressed early cutoff cannot work.
+
+### 7. Whether a post-build hook uploads to a cache
+
+*Why it matters:* not a correctness precondition, but the largest single cost
+found in this experiment, and it is charged per derivation, so it interacts
+directly with the granularity choice.
+
+*Check:* `nix config show post-build-hook`.
+
+*If it is set:* count derivations before choosing a finer granularity. On this
+machine it cost roughly 2 s each, which is more than everything else a
+derivation does put together.
 
 ## Does it compose?
 
-Yes, with one caveat that is worth stating plainly.
+The question the brief asked was whether Nx's semantic graph plus Nix's
+reproducible derivation model is more powerful than either alone. For a pnpm
+workspace the answer is that the question dissolves: there is no semantic graph
+to add, because Nx's graph *is* the manifests, and Nix can read those.
 
-The two models did not fight each other anywhere. Nix's content-addressed
-invalidation and Nx's semantic analysis sit at different layers: Nx answers
-"what depends on what", once, offline; Nix answers "what must be rebuilt", every
-time, from content. Feeding the first into the second worked, and the result was
-at least as precise as Nx on every change class tested and strictly more precise
-on two.
+Where the two do meet, they do not fight. They answer different questions — Nx
+answers "what depends on what", once, offline; Nix answers "what must be
+rebuilt", every time, from content — and feeding the first into the second
+worked, producing derivations identical to deriving it directly.
 
-The caveat: **the generated bridge is a cache of a semantic analysis, and stale
-caches are silent.** `nix/projects.json` is checked in. If a developer adds a
-dependency or a test file and does not regenerate it, Nix builds a graph that no
-longer matches the code, and the failure direction is "ran fewer tests, all
-green". Closing that is what the guards are for, and it takes three separate
-checks because the question has three parts.
+The caveat applies to whichever route you take, because **a graph Nix inferred
+is still an inference, and wrong inferences are silent.** Whether the table
+comes from Nx and is checked in, or from the manifests during evaluation, the
+failure direction is the same: fewer tests, all green. That is what the guards
+are for, and it takes three separate checks because the question has three
+parts. Deriving the graph in the evaluator removes one class of staleness — a
+generated file nobody regenerated — and relocates the rest to the workspace
+globs Nix restates because it cannot read YAML.
 
 ## Loose ends
 
-- Evaluation cost at 100–300 packages and thousands of derivations is untested;
-  everything here is at 19 projects. This is the main thing scale would tell us.
 - Content-addressed derivations remain untested: the daemon on this machine
   does not have `ca-derivations` enabled and enabling it is a system change.
   The prerequisite is now in place — see the section above — so the experiment
@@ -758,9 +981,14 @@ checks because the question has three parts.
 - The remaining per-unit gap, 1.20 s against Nx's 0.88 s, of which roughly half
   is Nix evaluation rather than work. Sharing the workspace skeleton was
   examined and rejected on measurement; see the cost section.
-- Whether the evaluation half of that shrinks or grows with the number of
-  projects. At 19 projects it is around 0.6 s per invocation and flat across
-  granularities, which says nothing about 300.
+- Whether that per-unit gap matters in practice, given that Nix wins on every
+  aggregate case. It is the number an editor-driven loop hits, so probably yes,
+  and roughly half of it is evaluation rather than work.
+- The scaling measurement is synthetic. It has the right dependency shapes and
+  the right project count, but every generated package is small and similar. A
+  real workspace with uneven package sizes and deeper import graphs could
+  evaluate differently, though the flatness of the curve — dominated by fixed
+  cost — suggests not by much.
 - A from-source build including the toolchain was considered and **not**
   measured, deliberately. It would mean building into a throwaway store under
   `--store /tmp/...`, and the number would be dominated by populating that
@@ -770,5 +998,6 @@ checks because the question has three parts.
   defines, rebuilt from a state where none of them existed. What is missing is
   only the one-off cost of a machine that has never seen the toolchain, and
   that is a property of Nix in general rather than of testing granularity.
-- Prototype 4 (the Nx task graph becoming Nix derivations) is argued against
-  below from the shape of the data rather than measured. It was never built.
+- Architecture D, the Nx task graph becoming Nix derivations, is argued against
+  from the shape of the data rather than measured. It was never built, and the
+  case for building it is a workspace with several targets per project.

@@ -42,7 +42,7 @@ chain-d ──► chain-c ──► chain-b ──► chain-a        orphan
 - `test-utils` is a **dev** dependency of `lexer`, `parser` and `runtime`. It is
   the case where the two dependency models disagree.
 
-Tests are real computations with real assertions, 128 of them across 27 files,
+Tests are real computations with real assertions, 129 of them across 27 files,
 deliberately uneven in cost (`lexer/tests/throughput.test.ts` and
 `runtime/tests/agreement.test.ts` are the slow ones).
 
@@ -57,7 +57,9 @@ pnpm install
 
 ## The three prototypes
 
-All of them read `nix/projects.json`, which is generated from Nx's graph.
+All of them read `nix/graph.nix`, which derives the project graph from the
+workspace manifests during evaluation — no Nx, no generated file, no
+import-from-derivation.
 
 ```bash
 # Prototype 1 and 2: one derivation per package.
@@ -70,10 +72,10 @@ nix build .#file-core--tests-hash-test-ts     # whole tests/ as input
 nix build .#narrow-core--tests-hash-test-ts   # only that file as input
 
 # The guards. `guard-<project>` checks that the per-test-file enumeration still
-# matches what Vitest itself discovers; `graphAgreement` checks that
-# nix/projects.json still matches the workspace manifests.
+# matches what Vitest itself discovers; `workspaceProjects` checks that the
+# workspace globs Nix restates still match what pnpm resolves.
 nix build .#guard-core
-nix build .#graphAgreement
+nix build .#workspaceProjects
 ```
 
 `nix flake check` builds every per-package test and every guard.
@@ -86,32 +88,33 @@ nix-store -q --references $(nix build .#build-parser --no-link --print-out-paths
 # ast, lexer, tokens — exactly parser's runtime dependencies, and not test-utils
 ```
 
-## Regenerating the bridge
+## The graph, and the optional bridge
 
-`nix/projects.json` is checked in and is a cache of Nx's analysis. Regenerate it
-after adding a package, a dependency or a test file:
+The project graph is derived during evaluation from the workspace manifests, so
+there is nothing to regenerate and nothing checked in. `nix/graph.nix` is the
+whole mechanism.
+
+It works because pnpm's isolated linking makes an undeclared import a hard
+build error rather than a missing edge, so the manifests *are* the graph. If
+that stops being true — a hoisted `node_modules`, or edges coming from
+`tsconfig` path aliases — generate a table from Nx and drop it in place:
 
 ```bash
-nx graph --file=results/nx-graph-export.json   # Nx's documented graph export
-node scripts/nx-to-nix.mjs                     # reduce it to nix/projects.json
+nx graph --file=results/nx-graph-export.json   # Nx's documented export
+node scripts/nx-to-nix.mjs                     # writes nix/projects.json
 ```
 
-Only documented Nx surface is involved. `scripts/dump-nx.mjs` also exports a
-graph, but it reaches into `nx/src/...` internals to get Nx's task inputs and
-hashes, and exists for the comparison experiments rather than for the bridge.
+`nix/graph.nix` picks that file up automatically if it exists, with no other
+change. Both routes produce byte-identical derivations, which is how they were
+shown to be equivalent.
 
-A stale `nix/projects.json` fails in the unsafe direction — fewer tests, still
-green. Three checks close that, because the question has three parts: whether
-every project and edge is still in the table (`graphAgreement`, from the
-manifests), whether the declared edges are the ones the source imports
-(`build-*`, via pnpm-strict resolution and `tsc`), and whether every test file
-is represented (`guard-*`, from Vitest's own enumeration). To run just the test
-file guards:
+Three checks protect the inference, because it can fail silently — fewer tests,
+still green:
 
 ```bash
-nix build $(nix eval --json .#packages.x86_64-linux \
-  --apply 'set: builtins.filter (n: builtins.match "guard-.*" n != null) (builtins.attrNames set)' \
-  | jq -r '.[] | ".#" + .')
+nix build .#workspaceProjects   # Nix's project list vs what pnpm resolves
+nix build .#build-core          # an import no manifest declares fails here
+nix build .#guard-core          # a test file Vitest runs with no derivation
 ```
 
 ## The experiments
@@ -125,6 +128,8 @@ node scripts/granularity.mjs          # results/granularity.json
 node scripts/benchmark.mjs            # results/benchmark.json
 node scripts/input-comparison.mjs     # results/input-comparison.json
 node scripts/correctness-probes.mjs   # results/correctness-probes.json
+node scripts/measure-scale.mjs        # results/scale.json
+node scripts/nx-dependency-levels.mjs # results/nx-dependency-levels.json
 node scripts/dump-nx-hashes.mjs       # Nx task hashes, to stdout
 ```
 
@@ -145,6 +150,11 @@ node scripts/dump-nx-hashes.mjs       # Nx task hashes, to stdout
   It also passes `--option post-build-hook ""`. This machine uploads every
   output to a shared binary cache, which costs roughly 2 s per derivation and
   swamped every Nix figure in FINDINGS.md until it was disabled.
+- **measure-scale** generates synthetic workspaces from 25 to 400 projects and
+  times evaluation with every derivation forced. This is the measurement that
+  decided the architecture holds at size.
+- **nx-dependency-levels** counts where Nx's file map actually carries
+  dependency information. The answer is: only on `package.json`.
 - **correctness-probes** deliberately breaks four things — an undeclared
   import, a type error no test exercises, a cross-package `tsconfig` `paths`
   alias, an uncommitted generated source — and records which mechanism notices
@@ -185,8 +195,8 @@ nix/workspace.nix         pnpm dependency closure and the install
 nix/support.nix           machinery shared by the prototypes
 nix/per-package.nix       prototype 1 and 2
 nix/per-test-file.nix     prototype 3, plus the enumeration guards
-nix/graph-guard.nix       the check that nix/projects.json has not drifted
-nix/projects.json         generated: the bridge from Nx to Nix
+nix/graph.nix             the project graph, derived from the manifests
+nix/graph-guard.nix       the check that Nix's project list matches pnpm's
 scripts/                  graph export, the bridge, and the four experiments
 results/                  measurements
 FINDINGS.md               what it all means
