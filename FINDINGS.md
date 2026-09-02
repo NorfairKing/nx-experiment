@@ -614,11 +614,11 @@ Nix at `--max-jobs 4`, hook disabled; Nx with its own cache.
 
 | | Nix | Nx |
 |---|---:|---:|
-| every test, nothing to do | **68 ms** | 467 ms |
-| one leaf unit, after an edit to it | 1.20 s | **0.88 s** |
-| every test, after an edit to the shared foundation | **3.80 s** | 6.57 s |
-| every unit rebuilt (19 per-package units) | **3.43 s** | 6.56 s |
-| every unit rebuilt (27 per-test-file units) | 4.05 s | 3.45 s |
+| every test, nothing to do | **75 ms** | 458 ms |
+| one leaf unit, after an edit to it | 1.18 s | **0.85 s** |
+| every test, after an edit to the shared foundation | **3.76 s** | 6.38 s |
+| every unit rebuilt (19 per-package units) | **3.78 s** | 6.49 s |
+| every unit rebuilt (27 per-test-file units) | 3.87 s | 3.42 s |
 
 The last two rows are the well-defined replacement for the cold column this
 section used to carry and then withdrew. Editing the shared Vitest config
@@ -635,42 +635,58 @@ the hook.
 
 ### Where the remaining per-unit cost goes
 
-For one leaf test derivation, roughly:
+Measured, not divided out of a total (`results/benchmark.json`). One leaf test
+derivation, edited uniquely so it must build:
 
-| | |
+| | | share |
+|---|---:|---:|
+| Nix evaluation (`--dry-run`, builds nothing) | 816 ms | 69% |
+| Vitest itself (~5 ms of assertions) | 292 ms | 25% |
+| stdenv and assembling the package's tree | **69 ms** | **6%** |
+| total | 1177 ms | |
+
+**The dominant per-unit cost is Nix evaluation, and it is not per-unit at all.**
+Evaluation is a fixed cost per `nix build` invocation, and the scaling section
+shows it barely moves with workspace size. Amortise it across a real
+invocation and the picture inverts:
+
+| | per unit of work |
 |---|---:|
-| Nix evaluation and client overhead | ~0.6 s |
-| stdenv and assembling the package's tree | ~0.3 s |
-| Vitest itself (~5 ms of assertions) | ~0.3 s |
+| Nix, 19 units in one invocation (3.78 s − 0.82 s eval) | **156 ms** |
+| Nx, 19 tasks in one invocation (6.49 s) | 341 ms |
 
-Vitest run directly in the live workspace takes 290 ms, so about a quarter of
-the derivation is irreducible. A derivation that does nothing at all still
-costs several hundred milliseconds, and dropping stdenv for a raw
-`builtins.derivation` saved under 200 ms of that. Disabling the sandbox changed
-nothing measurable.
+So Nix is *faster* per unit of work, roughly twice. It looks slower only when
+you build a single unit, because then one invocation's fixed evaluation cost is
+charged to that one unit. That is worth knowing for an editor-driven loop —
+`nix build` of one package's tests really does cost about 1.2 s — but it is not
+a property of the granularity.
 
-**So the plan this document previously named as "the first thing to do" —
-sharing the workspace skeleton between derivations — is not worth doing, and
-the measurement is why.** The expensive part was never the skeleton. What is
-shared can already be shared: `nodeModules` is one derivation that every test
-symlinks, and the remaining per-derivation work is a handful of `ln -s` calls.
-Going further would mean a shared derivation containing the package sources,
-and that would become an input to every test, so any source change would
-invalidate all of them. The whole point is that `packages/foo`'s test does not
-depend on `packages/bar`. There is nothing meaningful left to share without
-giving that up.
+**And it kills the plan this document once called "the first thing to do".**
+Sharing a workspace skeleton between derivations could only ever have recovered
+that 69 ms line: 6% of one unit, and 2% of a 19-unit run. The skeleton was never
+the expensive part. What can be shared already is — `nodeModules` is one
+derivation every test symlinks — and going further would mean a shared
+derivation holding the package sources, which becomes an input to every test, so
+any source edit would invalidate all of them. That is the property the whole
+design exists to protect, traded away for 6%.
 
 ### What this means for atomization
 
-Splitting 19 units into 27 costs Nix 3.43 s → 4.05 s, about 18% more, and
-buys almost no invalidation (22/27 against 14/19 for a source change). For Nx
-the same split *saves* 47%, 6.56 s → 3.45 s, because the slow files stop
-queueing behind a package-level task. The direction is unchanged from the
-earlier draft; the magnitude is not — the Nix penalty is 0.6 s, not the 24 s
-that was inferred from the hook-contaminated per-unit figure.
+For **Nx** the split *saves* 47%, 6.49 s → 3.42 s, because the slow files stop
+queueing behind a package-level task. That is well outside run-to-run noise and
+is the real argument for atomization.
 
-At 27 units Nix (4.05 s) and Nx's atomized run (3.45 s) are close enough that
-the choice stops being about speed.
+For **Nix** the penalty is small enough that this experiment cannot pin it
+down. Two runs of the same measurement gave 3.43 s → 4.05 s (+18%) and 3.78 s →
+3.87 s (+2%), against different revisions of the derivations. All that supports
+is "small" — somewhere between noise and a fifth. An earlier draft asserted
+24 s of overhead here, inferred from a per-unit figure that turned out to be
+mostly cache upload; the honest replacement is a range, not a number.
+
+The case against per-test-file granularity therefore does not rest on cost. It
+rests on the invalidation gain being negligible — 22/27 against 14/19 for a
+source change, which is proportionally *worse* — and on the enumeration hazard
+it introduces.
 
 There is a sting in the tail, though, and it is a real deployment finding
 rather than an artifact. **A per-derivation post-build hook penalises fine
@@ -681,15 +697,27 @@ rebuilds.
 
 ### The honest summary
 
-On this workspace, with the machine's cache upload out of the picture, **Nix is
-competitive on speed and wins outright once anything is cached**: 68 ms to
-establish that every test is up to date, against 467 ms for Nx, and the Nix
-answer does not depend on a local cache directory whose inputs somebody had to
-declare correctly.
+With the machine's cache upload out of the picture, **Nix wins on speed almost
+everywhere on this workspace**, which is not what earlier drafts of this
+section said:
 
-It is slower for one isolated unit, 1.20 s against 0.88 s, and that gap is the
-one to care about, because it is what an editor-driven inner loop hits. Half of
-it is Nix evaluation rather than work.
+- **75 ms** to establish that every test is up to date, against Nx's 458 ms —
+  and the Nix answer does not depend on a local cache directory whose inputs
+  somebody had to declare correctly.
+- **3.76 s** to rerun what a shared-foundation edit invalidates, against 6.38 s.
+- **156 ms** per unit of work with evaluation amortised, against 341 ms.
+
+The one place it loses is building a **single** unit: 1.18 s against 0.85 s.
+That is one invocation's fixed evaluation cost, 816 ms of it, charged to one
+unit. It is the number an editor-driven loop hits, so it matters, but it is a
+property of invoking Nix rather than of the granularity — and it does not grow
+with the workspace.
+
+Three earlier versions of this section claimed the opposite, in increasing
+detail and decreasing accuracy. Each was measuring the machine rather than the
+model: a per-derivation cache upload hook, `keep-outputs` turning a deletion
+into a no-op, and a harness whose repeated identical edit was served from cache.
+The lessons are collected below.
 
 ## How hard is the transfer, if you need one
 
@@ -795,8 +823,9 @@ workspace with several targets per project, where that stops being true.
 
 **E. Nx test atoms become Nix derivations.** The one place Nx supplies
 something genuinely not derivable from the manifests: the per-test-file split,
-which Nx gets by asking Vitest. It costs 18% on rebuilding everything and
-barely improves invalidation, so it earns its place only where per-file
+which Nx gets by asking Vitest. It costs Nix somewhere between nothing and a
+fifth on rebuilding everything, too little to measure reliably, and barely
+improves invalidation, so it earns its place only where per-file
 parallelism buys something a package-level task cannot — a package whose test
 files differ a lot in runtime, so the slow ones stop queueing behind the fast
 ones. It adds the enumeration hazard, so only with the guard in place. And if

@@ -10,7 +10,7 @@ The original ask had three criteria. Where they landed:
 |---|---|
 | avoids IFD if possible | **yes, for free** — the graph is derived in the evaluator; verified with `allow-import-from-derivation false` |
 | evaluates quickly | **yes** — 148 ms at 389 projects, 16× the projects for 1.4× the time |
-| maximises granularity of rebuilds | **per package is the frontier** — per-test-file costs 18% for almost no invalidation gain |
+| maximises granularity of rebuilds | **per package is the frontier** — per-test-file barely improves invalidation (22/27 vs 14/19) and adds a hazard |
 
 ## Phase 0 — check the preconditions first
 
@@ -108,8 +108,9 @@ of them was found not to work.
 ## Phase 4 — granularity, and when to stop
 
 **Stop at one build and one test derivation per package.** Going per-test-file
-costs 18% more wall clock and improves invalidation from 14/19 to 22/27 — that
-is, not at all in proportion. It also introduces the enumeration hazard.
+improves invalidation from 14/19 to 22/27 — proportionally *worse* — for a
+wall-clock cost too small to measure reliably (two runs gave +18% and +2%). It
+also introduces the enumeration hazard. The gain is not there.
 
 Reach for per-file only where a package's test files are *unevenly* slow, so
 the slow ones stop queueing behind the fast ones. If you do, take the file list
