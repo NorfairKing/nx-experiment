@@ -10,7 +10,7 @@
 , support
 }:
 let
-  inherit (support) table projectPath sharedFiles toSource prepareTree
+  inherit (support) table repoRoot projectPath sharedFiles toSource prepareTree
     linkDepsInto runVitest installLog;
 
   # The build reads the manifest, the tsconfig and src; not tests, not the
@@ -21,13 +21,22 @@ let
     (projectPath project "src")
   ]);
 
-  # The test additionally reads tests and the vitest config.
+  # The test gets the whole project directory, and that is not laziness.
+  #
+  # A tsconfig states which files tsc reads, so the build's inputs can be named
+  # precisely. A Vitest config is a program: it can pull in setup files, global
+  # setup, fixtures, snapshot directories and custom reporters from anywhere
+  # under the project, and none of that is visible to whoever writes the
+  # fileset. Naming `src`, `tests` and `vitest.config.ts` was an assumption
+  # about what Vitest reads, and it was wrong the first time it was tested — a
+  # `setupFiles: ['./test-setup.ts']` in packages/orphan broke the derivation
+  # with "Cannot find module .../test-setup.ts".
+  #
+  # The cost is real and shows up in the change matrix: a README edit now
+  # invalidates that package's test, where the narrower fileset ignored it. That
+  # was never precision, only an unsound guess.
   testFileset = project: lib.fileset.unions (sharedFiles ++ [
-    (projectPath project "package.json")
-    (projectPath project "tsconfig.json")
-    (projectPath project "src")
-    (projectPath project "tests")
-    (projectPath project "vitest.config.ts")
+    (repoRoot + "/${project.root}")
   ]);
 
   mkBuild = attr: project: stdenvNoCC.mkDerivation {

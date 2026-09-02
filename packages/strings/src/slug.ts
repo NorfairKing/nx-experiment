@@ -1,4 +1,4 @@
-import { hashHex } from '@nx-exp/core'
+import { hashHex } from '@nx-exp/core/hashing'
 
 const NON_SLUG = /[^a-z0-9]+/g
 

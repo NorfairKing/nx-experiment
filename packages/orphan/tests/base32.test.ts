@@ -22,3 +22,9 @@ describe('decodeBase32', () => {
     expect(() => decodeBase32('abc1')).toThrow(SyntaxError)
   })
 })
+
+describe('the round-trip matcher from test-setup.ts', () => {
+  it('is registered, which only holds if setupFiles was loaded', () => {
+    expect([1, 2, 3, 250]).toRoundTripThrough({ encode: encodeBase32, decode: decodeBase32 })
+  })
+})

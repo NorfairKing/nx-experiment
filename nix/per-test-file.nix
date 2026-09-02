@@ -23,22 +23,24 @@
 , support
 }:
 let
-  inherit (support) table projectPath sharedFiles toSource prepareTree
+  inherit (support) table repoRoot projectPath sharedFiles toSource prepareTree
     runVitest installLog;
 
-  ownFiles = project: [
-    (projectPath project "package.json")
-    (projectPath project "tsconfig.json")
-    (projectPath project "src")
-    (projectPath project "vitest.config.ts")
-  ];
+  # Everything under the project except its test files. A Vitest config can
+  # read setup files and fixtures from anywhere under the project, so those have
+  # to be present; only the sibling test files can safely be left out, and that
+  # is what makes the narrow variant narrow.
+  ownFilesWithoutTests = project: lib.fileset.difference
+    (repoRoot + "/${project.root}")
+    (projectPath project "tests");
 
   attrFor = attr: testFile:
     "${attr}--${lib.replaceStrings [ "/" "." ] [ "-" "-" ] testFile}";
 
   mkTestFile = builds: variant: attr: project: testFile:
     let
-      fileset = lib.fileset.unions (sharedFiles ++ ownFiles project ++ [
+      fileset = lib.fileset.unions (sharedFiles ++ [
+        (ownFilesWithoutTests project)
         (if variant == "narrow"
         then projectPath project testFile
         else projectPath project "tests")
@@ -74,7 +76,7 @@ let
   mkGuard = builds: attr: project: stdenvNoCC.mkDerivation {
     name = "nx-exp-${attr}-test-enumeration";
     src = toSource "nx-exp-${attr}-enumeration-src" (lib.fileset.unions
-      (sharedFiles ++ ownFiles project ++ [ (projectPath project "tests") ]));
+      (sharedFiles ++ [ (repoRoot + "/${project.root}") ]));
     nativeBuildInputs = [ nodejs ];
     dontPatchELF = true;
     dontStrip = true;
