@@ -31,7 +31,7 @@
             nixpkgs.lib.mapAttrs' (name: nixpkgs.lib.nameValuePair "${prefix}-${name}") set;
         in
         {
-          inherit (nxExperiment) manifests pnpmDeps nodeModules allTests;
+          inherit (nxExperiment) installInputs wholeManifests pnpmDeps nodeModules allTests;
         }
         // prefixed "build" nxExperiment.builds
         // prefixed "test" nxExperiment.tests;

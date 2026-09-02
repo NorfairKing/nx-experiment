@@ -17,7 +17,8 @@
     ],
     "sharedGlobals": [
       "{workspaceRoot}/tsconfig.base.json",
-      "{workspaceRoot}/vitest.shared.ts"
+      "{workspaceRoot}/vitest.shared.ts",
+      "{workspaceRoot}/pnpm-lock.yaml"
     ]
   },
   "targetDefaults": {
@@ -36,7 +37,6 @@
     },
     "test": {
       "dependsOn": [
-        "build",
         "^build"
       ],
       "inputs": [

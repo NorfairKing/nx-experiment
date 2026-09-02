@@ -5,7 +5,7 @@ final: _prev: {
       perPackage = final.callPackage ./per-package.nix { inherit workspace; };
     in
     {
-      inherit (workspace) manifests pnpmDeps nodeModules;
+      inherit (workspace) installInputs wholeManifests pnpmDeps nodeModules;
       inherit (perPackage) builds tests allTests;
     };
 }
