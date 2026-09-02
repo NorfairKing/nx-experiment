@@ -133,12 +133,18 @@ node scripts/dump-nx-hashes.mjs       # Nx task hashes, to stdout
   derivation paths changed. This is the main result.
 - **granularity** measures node count, evaluation time and invalidation at each
   of the three granularity levels.
-- **benchmark** times the cached case, one unit of work, and a rebuild after a
-  shared-source edit, against the Nx baseline. It does **not** measure a
-  from-source build: doing that meant deleting outputs, and `nix store delete`
-  runs a `/nix/store/.links` pass that took the machine down on a store
-  deduplicating a couple of hundred gigabytes. The script says so in a comment;
-  please leave it that way.
+- **benchmark** times the cached case, one unit of work, a rebuild after a
+  shared-source edit, and a rebuild of every unit at each granularity, against
+  the Nx baseline. It never deletes from the store: an earlier version measured
+  cold builds that way, and `nix store delete` runs a `/nix/store/.links` pass
+  that took the machine down on a store deduplicating a couple of hundred
+  gigabytes. Instead it edits `vitest.shared.ts`, which invalidates every test
+  derivation and no build derivation. The script says so in a comment; please
+  leave it that way.
+
+  It also passes `--option post-build-hook ""`. This machine uploads every
+  output to a shared binary cache, which costs roughly 2 s per derivation and
+  swamped every Nix figure in FINDINGS.md until it was disabled.
 - **correctness-probes** deliberately breaks four things — an undeclared
   import, a type error no test exercises, a cross-package `tsconfig` `paths`
   alias, an uncommitted generated source — and records which mechanism notices
