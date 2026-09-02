@@ -33,10 +33,12 @@ disabled. It is deployment policy, not part of the question.
 
 `nix flake check` passes: 59 checks — 19 per-package Vitest derivations, 19
 per-package `tsc` derivations, 19 test-file enumeration guards, the
-graph-agreement guard, and the formatters. Working tree clean.
+workspace-projects guard, and the formatters. Working tree clean, everything
+pushed to master.
 
-**The commits are pushed to master.** That was authorised late in the
-experiment; CI is the feedback loop that matters.
+CI at https://staging.nix-ci.com/gh:NorfairKing:nx-experiment/master is the
+feedback loop that matters, because it builds the flake in an environment that
+has none of this machine's warm store or local quirks.
 
 The workspace is 19 projects (16 packages, 3 apps), 27 test files, 129
 assertions, hand-written and shaped for the dependency cases: a heavily shared
@@ -45,8 +47,10 @@ foundation (`core`), a diamond with a chord (`tokens` → {`lexer`, `ast`} →
 isolated four-deep chain (`chain-d..a`), an orphan, and `test-utils` as a
 dev-only dependency of three packages.
 
-Scale was deferred deliberately by the user: theory first, hand-written
-packages, no generator. That deferral is now spent — see the plan below.
+`scripts/generate-scale-workspace.mjs` produces synthetic workspaces of any
+size into a gitignored `scale/`, which is how the scaling question was
+answered. The hand-written workspace is the one every number in `results/` is
+cited for; do not scale it.
 
 ## Established findings: do not re-derive these
 
