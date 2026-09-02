@@ -37,6 +37,15 @@ const outputPath = process.argv[2] ?? 'results/benchmark.json'
 // swamp the machine.
 const MAX_JOBS = '4'
 
+// This machine runs a post-build hook that uploads every output to a shared
+// binary cache. That is deployment policy, not part of the question being
+// asked, and it dominated every Nix figure here: the marginal cost of one
+// extra trivial derivation is about 1200 ms with the hook and about 20 ms
+// without. An earlier version of this script did not disable it and reported
+// 3.06 s as the "fixed cost per Nix derivation", roughly ninety per cent of
+// which was cache upload.
+const NIX_OPTIONS = ['--option', 'post-build-hook', '']
+
 const run = (command, args, options = {}) =>
   execFileSync(command, args, {
     encoding: 'utf8',
