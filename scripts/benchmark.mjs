@@ -9,7 +9,13 @@
 // Wall clock here includes each runner's fixed startup cost, which is the
 // point: it is what finer granularity has to pay for.
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from 'node:fs'
 import { dirname } from 'node:path'
 
 const outputPath = process.argv[2] ?? 'results/benchmark.json'
@@ -81,7 +87,7 @@ const deleteOutputs = (paths) => {
 // a later `git add -A` can commit it. That residue is invisible to a clean-tree
 // check, and appending a second copy of the same declaration is a compile
 // error rather than a measurement. Refuse to start instead.
-const MUTATION_MARKER = 'const unused = 1'
+const MUTATION_MARKER = 'harness-mutation'
 
 const assertNoResidue = (files) => {
   for (const file of files) {
@@ -95,6 +101,11 @@ const assertNoResidue = (files) => {
   }
 }
 
+// Each level's units, plus the build derivations beneath them. Deleting only
+// the test outputs left every tsc output in the store, so "cold" meant
+// "everything except the compilation" and drifted with whatever earlier runs
+// happened to leave behind: the same per-package figure came out at 23 s on one
+// run and 80 s on the next. Cold here means from source.
 const NIX_LEVELS = [
   { id: 'per-package', prefix: 'test-' },
   { id: 'per-test-file', prefix: 'file-' },
@@ -106,15 +117,17 @@ const results = { nix: {}, nx: {} }
 // allTests pins every per-package test output, so it has to go first.
 deleteOutputs(outPathsOf(['allTests']))
 
+const buildAttrs = attrsWithPrefix('build-')
+
 for (const level of NIX_LEVELS) {
   const attrs = attrsWithPrefix(level.prefix)
-  buildAll(attrs)
-  const outPaths = outPathsOf(attrs)
+  buildAll([...attrs, ...buildAttrs])
+  const outPaths = [...outPathsOf(attrs), ...outPathsOf(buildAttrs)]
   const deleted = deleteOutputs(outPaths)
   results.nix[level.id] = {
     derivations: attrs.length,
     outputsDeletedBeforeColdRun: `${deleted}/${outPaths.length}`,
-    coldMs: time(`nix ${level.id} (cold)`, () => buildAll(attrs)),
+    coldMs: time(`nix ${level.id} (cold, from source)`, () => buildAll(attrs)),
     cachedMs: time(`nix ${level.id} (cached)`, () => buildAll(attrs)),
   }
 }
@@ -134,7 +147,14 @@ try {
   buildAll(allTestAttrs)
   run('node_modules/.bin/nx', ['run-many', '-t', 'test'])
 
-  run('bash', ['-c', `printf '\nconst unused = 1\nvoid unused\n' >> ${SHARED_SOURCE}`])
+  // Unique per run: an earlier run's identical edit produced identical
+  // derivations, whose outputs were still in the store, and the measurement
+  // came back as 1.3 s of cache hits.
+  const stamp = Date.now()
+  appendFileSync(
+    SHARED_SOURCE,
+    `\n// ${MUTATION_MARKER} ${stamp}\nconst unused${stamp} = 1\nvoid unused${stamp}\n`,
+  )
   run('git', ['add', '--', SHARED_SOURCE])
 
   results.nix.incrementalSharedSourceMs = time(

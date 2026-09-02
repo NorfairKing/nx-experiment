@@ -72,31 +72,49 @@ const nxAffectedTestTasks = () => {
   return JSON.parse(raw).sort()
 }
 
+// A harness that crashes mid-mutation leaves its edit in the working tree, and
+// a later `git add -A` can commit it. That residue is invisible to a clean-tree
+// check, and appending a second copy of the same declaration is a compile
+// error rather than a measurement. Refuse to start instead.
+const MUTATION_MARKER = 'harness-mutation'
+
+const assertNoResidue = (files) => {
+  for (const file of files) {
+    if (!existsSync(file)) continue
+    if (readFileSync(file, 'utf8').includes(MUTATION_MARKER)) {
+      throw new Error(
+        `${file} already contains a harness mutation (${MUTATION_MARKER}); ` +
+          'a previous run left it behind and it may have been committed',
+      )
+    }
+  }
+}
+
 // Each mutation names the tracked file it touches and how to undo it.
 const mutations = [
   {
     id: 'leaf-source',
     description: 'source of an isolated leaf package with no dependants',
     file: 'packages/orphan/src/base32.ts',
-    apply: (file) => appendFileSync(file, '\nconst unused = 1\nvoid unused\n'),
+    apply: (file) => appendFileSync(file, `\n// ${MUTATION_MARKER}\nconst unused = 1\nvoid unused\n`),
   },
   {
     id: 'shared-source',
     description: 'source of the foundation package five packages depend on',
     file: 'packages/core/src/hash.ts',
-    apply: (file) => appendFileSync(file, '\nconst unused = 1\nvoid unused\n'),
+    apply: (file) => appendFileSync(file, `\n// ${MUTATION_MARKER}\nconst unused = 1\nvoid unused\n`),
   },
   {
     id: 'chain-leaf-source',
     description: 'source at the bottom of the isolated four-deep chain',
     file: 'packages/chain-d/src/index.ts',
-    apply: (file) => appendFileSync(file, '\nconst unused = 1\nvoid unused\n'),
+    apply: (file) => appendFileSync(file, `\n// ${MUTATION_MARKER}\nconst unused = 1\nvoid unused\n`),
   },
   {
     id: 'dev-only-dependency-source',
     description: 'source of a package other packages depend on only for tests',
     file: 'packages/test-utils/src/random.ts',
-    apply: (file) => appendFileSync(file, '\nconst unused = 1\nvoid unused\n'),
+    apply: (file) => appendFileSync(file, `\n// ${MUTATION_MARKER}\nconst unused = 1\nvoid unused\n`),
   },
   {
     id: 'test-file',
@@ -182,24 +200,6 @@ const restore = (mutation) => {
     // The file was staged so Nix would see it, so both the index and the
     // working tree have to come back from HEAD.
     run('git', ['restore', '--staged', '--worktree', '--', mutation.file])
-  }
-}
-
-// A harness that crashes mid-mutation leaves its edit in the working tree, and
-// a later `git add -A` can commit it. That residue is invisible to a clean-tree
-// check, and appending a second copy of the same declaration is a compile
-// error rather than a measurement. Refuse to start instead.
-const MUTATION_MARKER = 'const unused = 1'
-
-const assertNoResidue = (files) => {
-  for (const file of files) {
-    if (!existsSync(file)) continue
-    if (readFileSync(file, 'utf8').includes(MUTATION_MARKER)) {
-      throw new Error(
-        `${file} already contains a harness mutation (${MUTATION_MARKER}); ` +
-          'a previous run left it behind and it may have been committed',
-      )
-    }
   }
 }
 
