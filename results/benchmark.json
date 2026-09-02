@@ -4,31 +4,32 @@
   "nix": {
     "per-package": {
       "derivations": 19,
-      "cachedMs": 63,
-      "everyUnitMs": 2936
+      "cachedMs": 68,
+      "everyUnitMs": 3433
     },
     "per-test-file": {
       "derivations": 27,
-      "cachedMs": 71,
-      "everyUnitMs": 3968
+      "cachedMs": 76,
+      "everyUnitMs": 4048
     },
     "per-test-file-narrow": {
       "derivations": 27,
-      "cachedMs": 70,
-      "everyUnitMs": 3991
+      "cachedMs": 77,
+      "everyUnitMs": 3943
     },
-    "incrementalSharedSourceMs": 3876,
-    "singleLeafDerivationMs": 1201
+    "incrementalSharedSourceMs": 3801,
+    "singleLeafDerivationMs": 1195,
+    "singleLeafDerivationWithUploadHookMs": 3249
   },
   "nx": {
-    "incrementalSharedSourceMs": 6548,
-    "singleLeafTaskMs": 864,
-    "runManyColdMs": 6599,
-    "runManyWarmMs": 452,
+    "incrementalSharedSourceMs": 6569,
+    "singleLeafTaskMs": 880,
+    "runManyColdMs": 6556,
+    "runManyWarmMs": 467,
     "atomizedTaskCount": 27,
     "atomizedTargetNames": 26,
     "groupTargetRunsLocally": false,
     "groupTargetRefusal": "refused",
-    "atomizedColdMs": 3451
+    "atomizedColdMs": 3447
   }
 }
