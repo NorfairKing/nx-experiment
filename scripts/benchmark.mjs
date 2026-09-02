@@ -64,12 +64,27 @@ const attrsWithPrefix = (prefix) =>
     ]),
   )
 
+// Appends something no run has appended before, so the derivations it
+// invalidates have never been built and the timing is real work. Returns a
+// function that puts the file back.
+const mutate = (file) => {
+  assertNoResidue([file])
+  const stamp = `${Date.now()}${Math.floor(Math.random() * 1000)}`
+  appendFileSync(
+    file,
+    `\n// ${MUTATION_MARKER} ${stamp}\nconst unused${stamp} = 1\nvoid unused${stamp}\n`,
+  )
+  run('git', ['add', '--', file])
+  return () => run('git', ['restore', '--staged', '--worktree', '--', file])
+}
+
 const buildAll = (attrs) =>
   run('nix', [
     'build',
     '--no-link',
     '--max-jobs',
     MAX_JOBS,
+    ...NIX_OPTIONS,
     ...attrs.map((attr) => `.#${attr}`),
   ])
 
@@ -96,46 +111,55 @@ const LEVELS = [
   { id: 'per-test-file-narrow', prefix: 'narrow-' },
 ]
 
-const results = { maxJobs: Number(MAX_JOBS), nix: {}, nx: {} }
+const results = {
+  maxJobs: Number(MAX_JOBS),
+  postBuildHookDisabled: true,
+  nix: {},
+  nx: {},
+}
+
+// Editing the shared Vitest config invalidates every test derivation at every
+// granularity, and no build derivation, so this rebuilds each level's whole
+// set from a state nothing has built. It is the well-defined replacement for
+// the cold column that was withdrawn: same work, no store deletion.
+const SHARED_TEST_CONFIG = 'vitest.shared.ts'
 
 for (const level of LEVELS) {
   const attrs = attrsWithPrefix(level.prefix)
   buildAll(attrs)
-  results.nix[level.id] = {
-    derivations: attrs.length,
-    cachedMs: time(`nix ${level.id} (cached)`, () => buildAll(attrs)),
+  const cachedMs = time(`nix ${level.id} (cached)`, () => buildAll(attrs))
+
+  const restore = mutate(SHARED_TEST_CONFIG)
+  let everyUnitMs
+  try {
+    everyUnitMs = time(`nix ${level.id} (every unit rebuilt)`, () => buildAll(attrs))
+  } finally {
+    restore()
   }
+
+  results.nix[level.id] = { derivations: attrs.length, cachedMs, everyUnitMs }
 }
 
 const SHARED_SOURCE = 'packages/core/src/hash.ts'
-assertNoResidue([SHARED_SOURCE])
 const allTestAttrs = attrsWithPrefix('test-')
 
-try {
-  buildAll(allTestAttrs)
-  run('node_modules/.bin/nx', ['run-many', '-t', 'test'])
+buildAll(allTestAttrs)
+run('node_modules/.bin/nx', ['run-many', '-t', 'test'])
 
-  // Unique per run: an earlier run's identical edit produced identical
-  // derivations, whose outputs were still in the store, and the measurement
-  // came back as 1.3 s of cache hits for work that recompiles fourteen
-  // packages.
-  const stamp = Date.now()
-  appendFileSync(
-    SHARED_SOURCE,
-    `\n// ${MUTATION_MARKER} ${stamp}\nconst unused${stamp} = 1\nvoid unused${stamp}\n`,
-  )
-  run('git', ['add', '--', SHARED_SOURCE])
-
-  results.nix.incrementalSharedSourceMs = time(
-    'nix, every test, after a shared-source edit',
-    () => buildAll(allTestAttrs),
-  )
-  results.nx.incrementalSharedSourceMs = time(
-    'nx affected -t test, after the same edit',
-    () => run('node_modules/.bin/nx', ['affected', '-t', 'test', '--base=HEAD']),
-  )
-} finally {
-  run('git', ['restore', '--staged', '--worktree', '--', SHARED_SOURCE])
+{
+  const restore = mutate(SHARED_SOURCE)
+  try {
+    results.nix.incrementalSharedSourceMs = time(
+      'nix, every test, after a shared-source edit',
+      () => buildAll(allTestAttrs),
+    )
+    results.nx.incrementalSharedSourceMs = time(
+      'nx affected -t test, after the same edit',
+      () => run('node_modules/.bin/nx', ['affected', '-t', 'test', '--base=HEAD']),
+    )
+  } finally {
+    restore()
+  }
 }
 
 // The fixed cost of one unit of work, measured directly rather than divided
@@ -143,29 +167,24 @@ try {
 // milliseconds, edited uniquely so nothing has built the result: what is left
 // is almost entirely overhead.
 const LEAF_SOURCE = 'packages/orphan/src/base32.ts'
-assertNoResidue([LEAF_SOURCE])
 
-try {
-  buildAll(['test-orphan'])
-  run('node_modules/.bin/nx', ['run', '@nx-exp/orphan:test'])
+buildAll(['test-orphan'])
+run('node_modules/.bin/nx', ['run', '@nx-exp/orphan:test'])
 
-  const stamp = Date.now()
-  appendFileSync(
-    LEAF_SOURCE,
-    `\n// ${MUTATION_MARKER} ${stamp}\nconst unused${stamp} = 1\nvoid unused${stamp}\n`,
-  )
-  run('git', ['add', '--', LEAF_SOURCE])
-
-  results.nix.singleLeafDerivationMs = time(
-    'nix, one leaf test derivation, after an edit',
-    () => buildAll(['test-orphan']),
-  )
-  results.nx.singleLeafTaskMs = time(
-    'nx, the same leaf test task, after the edit',
-    () => run('node_modules/.bin/nx', ['run', '@nx-exp/orphan:test']),
-  )
-} finally {
-  run('git', ['restore', '--staged', '--worktree', '--', LEAF_SOURCE])
+{
+  const restore = mutate(LEAF_SOURCE)
+  try {
+    results.nix.singleLeafDerivationMs = time(
+      'nix, one leaf test derivation, after an edit',
+      () => buildAll(['test-orphan']),
+    )
+    results.nx.singleLeafTaskMs = time(
+      'nx, the same leaf test task, after the edit',
+      () => run('node_modules/.bin/nx', ['run', '@nx-exp/orphan:test']),
+    )
+  } finally {
+    restore()
+  }
 }
 
 run('node_modules/.bin/nx', ['reset'])

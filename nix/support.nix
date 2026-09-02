@@ -9,10 +9,17 @@ rec {
 
   table = builtins.fromJSON (builtins.readFile ./projects.json);
 
-  # Read by every tsc and vitest invocation through a relative path, so every
-  # derivation legitimately depends on them.
-  sharedFiles = [
+  # Workspace-root files reached through a relative path. They are split
+  # because tsc and Vitest do not read the same ones: every package's tsconfig
+  # extends tsconfig.base.json, and every package's vitest config merges
+  # vitest.shared.ts, but neither tool reads the other's file. Handing both to
+  # both would make an edit to the shared Vitest config rebuild every tsc
+  # output for nothing.
+  sharedBuildFiles = [
     (repoRoot + "/tsconfig.base.json")
+  ];
+
+  sharedTestFiles = sharedBuildFiles ++ [
     (repoRoot + "/vitest.shared.ts")
   ];
 

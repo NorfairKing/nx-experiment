@@ -23,8 +23,8 @@
 , support
 }:
 let
-  inherit (support) table repoRoot projectPath sharedFiles toSource prepareTree
-    runVitest installLog;
+  inherit (support) table repoRoot projectPath sharedTestFiles toSource
+    prepareTree runVitest installLog;
 
   # Everything under the project except its test files. A Vitest config can
   # read setup files and fixtures from anywhere under the project, so those have
@@ -39,7 +39,7 @@ let
 
   mkTestFile = builds: variant: attr: project: testFile:
     let
-      fileset = lib.fileset.unions (sharedFiles ++ [
+      fileset = lib.fileset.unions (sharedTestFiles ++ [
         (ownFilesWithoutTests project)
         (if variant == "narrow"
         then projectPath project testFile
@@ -76,7 +76,7 @@ let
   mkGuard = builds: attr: project: stdenvNoCC.mkDerivation {
     name = "nx-exp-${attr}-test-enumeration";
     src = toSource "nx-exp-${attr}-enumeration-src" (lib.fileset.unions
-      (sharedFiles ++ [ (repoRoot + "/${project.root}") ]));
+      (sharedTestFiles ++ [ (repoRoot + "/${project.root}") ]));
     nativeBuildInputs = [ nodejs ];
     dontPatchELF = true;
     dontStrip = true;

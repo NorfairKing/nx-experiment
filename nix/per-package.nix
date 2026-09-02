@@ -10,12 +10,12 @@
 , support
 }:
 let
-  inherit (support) table repoRoot projectPath sharedFiles toSource prepareTree
-    linkDepsInto runVitest installLog;
+  inherit (support) table repoRoot projectPath sharedBuildFiles sharedTestFiles
+    toSource prepareTree linkDepsInto runVitest installLog;
 
   # The build reads the manifest, the tsconfig and src; not tests, not the
   # vitest config, not the README.
-  buildFileset = project: lib.fileset.unions (sharedFiles ++ [
+  buildFileset = project: lib.fileset.unions (sharedBuildFiles ++ [
     (projectPath project "package.json")
     (projectPath project "tsconfig.json")
     (projectPath project "src")
@@ -35,7 +35,7 @@ let
   # The cost is real and shows up in the change matrix: a README edit now
   # invalidates that package's test, where the narrower fileset ignored it. That
   # was never precision, only an unsound guess.
-  testFileset = project: lib.fileset.unions (sharedFiles ++ [
+  testFileset = project: lib.fileset.unions (sharedTestFiles ++ [
     (repoRoot + "/${project.root}")
   ]);
 
