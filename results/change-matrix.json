@@ -410,27 +410,7 @@
         ]
       },
       "nix": {
-        "invalidatedBuilds": [
-          "ast",
-          "chain-a",
-          "chain-b",
-          "chain-c",
-          "chain-d",
-          "cli",
-          "collections",
-          "compiler",
-          "core",
-          "lexer",
-          "logging",
-          "orphan",
-          "parser",
-          "report",
-          "runtime",
-          "strings",
-          "test-utils",
-          "tokens",
-          "web"
-        ],
+        "invalidatedBuilds": [],
         "invalidatedTests": [
           "ast",
           "chain-a",
