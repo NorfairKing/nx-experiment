@@ -972,6 +972,61 @@ parts. Deriving the graph in the evaluator removes one class of staleness — a
 generated file nobody regenerated — and relocates the rest to the workspace
 globs Nix restates because it cannot read YAML.
 
+## Lessons about measuring a Nix build
+
+The cost section of this document was wrong three times, each time in Nix's
+disfavour, and each time because the measurement was picking up something other
+than the thing being asked about. These are the traps, separated from this
+repository's specifics, because anyone measuring a Nix build on a real machine
+will hit at least one.
+
+**A post-build hook is charged per derivation.** This machine uploads every
+output to a shared binary cache. On one leaf unit that is 3.25 s with the hook
+against 1.20 s without — two thirds of what was reported as "the fixed cost per
+Nix derivation" was cache upload. Measure with `--option post-build-hook ""`,
+and record that you did. It also means a per-derivation hook interacts directly
+with granularity: it charges again for every unit you split into.
+
+**`keep-outputs` makes "delete then rebuild" silently do nothing.** An output
+stays alive as long as its derivation is alive, so `nix store delete` refuses,
+and a cold measurement quietly becomes a cache lookup — 93 ms presented as a
+cold build. If you delete to force work, count how many paths actually went and
+report the count.
+
+**Better still, do not delete at all.** `nix store delete` scans every GC root
+and then runs a `/nix/store/.links` pass. On a store deduplicating a couple of
+hundred gigabytes, called once per path, that took the machine down. Force real
+work by *changing an input* instead: editing one shared file here invalidates
+every test derivation and no build derivation, which is the same work as a cold
+run with nothing removed.
+
+**A repeated identical mutation measures the cache, not the work.** A harness
+that appends the same text every run reproduces derivations an earlier run
+already built. That is how this document came to claim Nix was "70× slower on a
+one-file change"; it was Nx serving a cache hit, and with a unique edit per run
+the gap is about 7× the other way. Make each mutation unique.
+
+**Residue from a crashed harness can end up committed.** A run that aborted
+mid-mutation left `const unused = 1` in a source file, a later `git add -A`
+swept it up, and it sat there compiling fine until the next run appended a
+second copy and `tsc` reported a redeclaration. A clean-tree check does not
+catch this; a marker check does.
+
+**`--rebuild` does not apply to a test.** A test run is not reproducible and
+does not need to be — the derivation succeeding is the evidence. Do not spend
+effort making test output deterministic; nothing consumes it.
+
+**Divide-and-attribute is a trap.** "Fixed cost per derivation" was computed by
+dividing a total, and inherited every contaminant in that total. Measure one
+unit directly instead: a package whose tests take single-digit milliseconds,
+edited uniquely, gives the overhead nearly neat.
+
+**Check whether the field you want is populated, not just present.** A day went
+into designing a bridge to import Nx's dependency analysis. Nx's file map has a
+per-file `deps` field, and one `jq` query would have shown it empty for all 88
+TypeScript files. The schema having a place for something is not the same as
+something being there.
+
 ## Loose ends
 
 - Content-addressed derivations remain untested: the daemon on this machine
