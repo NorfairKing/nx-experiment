@@ -87,13 +87,13 @@ const mutate = (file) => {
   return () => run('git', ['restore', '--staged', '--worktree', '--', file])
 }
 
-const buildAll = (attrs) =>
+const buildAll = (attrs, options = NIX_OPTIONS) =>
   run('nix', [
     'build',
     '--no-link',
     '--max-jobs',
     MAX_JOBS,
-    ...NIX_OPTIONS,
+    ...options,
     ...attrs.map((attr) => `.#${attr}`),
   ])
 
@@ -190,6 +190,21 @@ run('node_modules/.bin/nx', ['run', '@nx-exp/orphan:test'])
     results.nx.singleLeafTaskMs = time(
       'nx, the same leaf test task, after the edit',
       () => run('node_modules/.bin/nx', ['run', '@nx-exp/orphan:test']),
+    )
+  } finally {
+    restore()
+  }
+}
+
+// The same unit again, this time letting the machine's post-build hook run, so
+// the difference is the cache upload rather than anything about granularity.
+// Every other Nix figure here has the hook disabled.
+{
+  const restore = mutate(LEAF_SOURCE)
+  try {
+    results.nix.singleLeafDerivationWithUploadHookMs = time(
+      'nix, the same leaf unit, with the upload hook',
+      () => buildAll(['test-orphan'], []),
     )
   } finally {
     restore()
