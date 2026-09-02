@@ -1,0 +1,33 @@
+{
+  "nix": {
+    "per-package": {
+      "derivations": 19,
+      "outputsDeletedBeforeColdRun": "19/19",
+      "coldMs": 23370,
+      "cachedMs": 93
+    },
+    "per-test-file": {
+      "derivations": 27,
+      "outputsDeletedBeforeColdRun": "27/27",
+      "coldMs": 32908,
+      "cachedMs": 96
+    },
+    "per-test-file-narrow": {
+      "derivations": 27,
+      "outputsDeletedBeforeColdRun": "27/27",
+      "coldMs": 32354,
+      "cachedMs": 99
+    },
+    "incrementalSharedSourceMs": 47837
+  },
+  "nx": {
+    "incrementalSharedSourceMs": 682,
+    "runManyColdMs": 7335,
+    "runManyWarmMs": 522,
+    "atomizedTaskCount": 27,
+    "atomizedTargetNames": 26,
+    "groupTargetRunsLocally": false,
+    "groupTargetRefusal": "refused",
+    "atomizedColdMs": 3814
+  }
+}

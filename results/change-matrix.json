@@ -1,0 +1,809 @@
+{
+  "totalProjects": 19,
+  "legend": {
+    "nxAffectedProjects": "projects nx show projects --affected reports; project-level, ignores target inputs",
+    "nxRehashedTestTasks": "test tasks whose Nx task hash changed; the unit Nx actually reuses or reruns",
+    "nixInvalidatedTests": "test derivations whose .drv path changed; the unit Nix actually reuses or rebuilds"
+  },
+  "projects": [
+    "ast",
+    "chain-a",
+    "chain-b",
+    "chain-c",
+    "chain-d",
+    "cli",
+    "collections",
+    "compiler",
+    "core",
+    "lexer",
+    "logging",
+    "orphan",
+    "parser",
+    "report",
+    "runtime",
+    "strings",
+    "test-utils",
+    "tokens",
+    "web"
+  ],
+  "changes": [
+    {
+      "id": "leaf-source",
+      "description": "source of an isolated leaf package with no dependants",
+      "file": "packages/orphan/src/base32.ts",
+      "nx": {
+        "affectedProjects": [
+          "orphan"
+        ],
+        "affectedTestProjects": [
+          "orphan"
+        ],
+        "rehashedBuildTasks": [],
+        "rehashedTestTasks": [
+          "orphan"
+        ]
+      },
+      "nix": {
+        "invalidatedBuilds": [
+          "orphan"
+        ],
+        "invalidatedTests": [
+          "orphan"
+        ]
+      }
+    },
+    {
+      "id": "shared-source",
+      "description": "source of the foundation package five packages depend on",
+      "file": "packages/core/src/hash.ts",
+      "nx": {
+        "affectedProjects": [
+          "ast",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ],
+        "affectedTestProjects": [
+          "ast",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ],
+        "rehashedBuildTasks": [
+          "ast",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "parser",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens"
+        ],
+        "rehashedTestTasks": [
+          "ast",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ]
+      },
+      "nix": {
+        "invalidatedBuilds": [
+          "ast",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ],
+        "invalidatedTests": [
+          "ast",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ]
+      }
+    },
+    {
+      "id": "chain-leaf-source",
+      "description": "source at the bottom of the isolated four-deep chain",
+      "file": "packages/chain-d/src/index.ts",
+      "nx": {
+        "affectedProjects": [
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d"
+        ],
+        "affectedTestProjects": [
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d"
+        ],
+        "rehashedBuildTasks": [
+          "chain-b",
+          "chain-c",
+          "chain-d"
+        ],
+        "rehashedTestTasks": [
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d"
+        ]
+      },
+      "nix": {
+        "invalidatedBuilds": [
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d"
+        ],
+        "invalidatedTests": [
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d"
+        ]
+      }
+    },
+    {
+      "id": "dev-only-dependency-source",
+      "description": "source of a package other packages depend on only for tests",
+      "file": "packages/test-utils/src/random.ts",
+      "nx": {
+        "affectedProjects": [
+          "cli",
+          "compiler",
+          "lexer",
+          "parser",
+          "report",
+          "runtime",
+          "test-utils",
+          "web"
+        ],
+        "affectedTestProjects": [
+          "cli",
+          "compiler",
+          "lexer",
+          "parser",
+          "report",
+          "runtime",
+          "test-utils",
+          "web"
+        ],
+        "rehashedBuildTasks": [
+          "compiler",
+          "lexer",
+          "parser",
+          "runtime",
+          "test-utils"
+        ],
+        "rehashedTestTasks": [
+          "cli",
+          "compiler",
+          "lexer",
+          "parser",
+          "report",
+          "runtime",
+          "test-utils",
+          "web"
+        ]
+      },
+      "nix": {
+        "invalidatedBuilds": [
+          "test-utils"
+        ],
+        "invalidatedTests": [
+          "lexer",
+          "parser",
+          "runtime",
+          "test-utils"
+        ]
+      }
+    },
+    {
+      "id": "test-file",
+      "description": "a test file, with no source change",
+      "file": "packages/orphan/tests/base32.test.ts",
+      "nx": {
+        "affectedProjects": [
+          "orphan"
+        ],
+        "affectedTestProjects": [
+          "orphan"
+        ],
+        "rehashedBuildTasks": [],
+        "rehashedTestTasks": [
+          "orphan"
+        ]
+      },
+      "nix": {
+        "invalidatedBuilds": [],
+        "invalidatedTests": [
+          "orphan"
+        ]
+      }
+    },
+    {
+      "id": "package-manifest",
+      "description": "a package.json, without changing any dependency",
+      "file": "packages/orphan/package.json",
+      "nx": {
+        "affectedProjects": [
+          "orphan"
+        ],
+        "affectedTestProjects": [
+          "orphan"
+        ],
+        "rehashedBuildTasks": [],
+        "rehashedTestTasks": [
+          "orphan"
+        ]
+      },
+      "nix": {
+        "invalidatedBuilds": [
+          "orphan"
+        ],
+        "invalidatedTests": [
+          "orphan"
+        ]
+      }
+    },
+    {
+      "id": "package-vitest-config",
+      "description": "one package’s vitest config",
+      "file": "packages/orphan/vitest.config.ts",
+      "nx": {
+        "affectedProjects": [
+          "orphan"
+        ],
+        "affectedTestProjects": [
+          "orphan"
+        ],
+        "rehashedBuildTasks": [],
+        "rehashedTestTasks": [
+          "orphan"
+        ]
+      },
+      "nix": {
+        "invalidatedBuilds": [],
+        "invalidatedTests": [
+          "orphan"
+        ]
+      }
+    },
+    {
+      "id": "shared-vitest-config",
+      "description": "the vitest config every package merges",
+      "file": "vitest.shared.ts",
+      "nx": {
+        "affectedProjects": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ],
+        "affectedTestProjects": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ],
+        "rehashedBuildTasks": [
+          "ast",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "parser",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens"
+        ],
+        "rehashedTestTasks": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ]
+      },
+      "nix": {
+        "invalidatedBuilds": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ],
+        "invalidatedTests": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ]
+      }
+    },
+    {
+      "id": "shared-tsconfig",
+      "description": "the tsconfig every package extends",
+      "file": "tsconfig.base.json",
+      "nx": {
+        "affectedProjects": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ],
+        "affectedTestProjects": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ],
+        "rehashedBuildTasks": [
+          "ast",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "parser",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens"
+        ],
+        "rehashedTestTasks": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ]
+      },
+      "nix": {
+        "invalidatedBuilds": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ],
+        "invalidatedTests": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ]
+      }
+    },
+    {
+      "id": "lockfile",
+      "description": "the pnpm lockfile",
+      "file": "pnpm-lock.yaml",
+      "nx": {
+        "affectedProjects": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ],
+        "affectedTestProjects": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ],
+        "rehashedBuildTasks": [
+          "ast",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "parser",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens"
+        ],
+        "rehashedTestTasks": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ]
+      },
+      "nix": {
+        "invalidatedBuilds": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ],
+        "invalidatedTests": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ]
+      }
+    },
+    {
+      "id": "root-manifest",
+      "description": "a field of the root package.json that nothing reads",
+      "file": "package.json",
+      "nx": {
+        "affectedProjects": [],
+        "affectedTestProjects": [],
+        "rehashedBuildTasks": [],
+        "rehashedTestTasks": []
+      },
+      "nix": {
+        "invalidatedBuilds": [],
+        "invalidatedTests": []
+      }
+    },
+    {
+      "id": "workspace-yaml",
+      "description": "pnpm-workspace.yaml, which decides what a workspace package is",
+      "file": "pnpm-workspace.yaml",
+      "nx": {
+        "affectedProjects": [],
+        "affectedTestProjects": [],
+        "rehashedBuildTasks": [],
+        "rehashedTestTasks": []
+      },
+      "nix": {
+        "invalidatedBuilds": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ],
+        "invalidatedTests": [
+          "ast",
+          "chain-a",
+          "chain-b",
+          "chain-c",
+          "chain-d",
+          "cli",
+          "collections",
+          "compiler",
+          "core",
+          "lexer",
+          "logging",
+          "orphan",
+          "parser",
+          "report",
+          "runtime",
+          "strings",
+          "test-utils",
+          "tokens",
+          "web"
+        ]
+      }
+    },
+    {
+      "id": "readme",
+      "description": "a new README in one package",
+      "file": "packages/orphan/README.md",
+      "nx": {
+        "affectedProjects": [
+          "orphan"
+        ],
+        "affectedTestProjects": [
+          "orphan"
+        ],
+        "rehashedBuildTasks": [],
+        "rehashedTestTasks": []
+      },
+      "nix": {
+        "invalidatedBuilds": [],
+        "invalidatedTests": [
+          "orphan"
+        ]
+      }
+    }
+  ]
+}

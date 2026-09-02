@@ -1,0 +1,1583 @@
+{
+  "repoFileCount": 148,
+  "comparisons": {
+    "core": {
+      "project": "@nx-exp/core",
+      "counts": {
+        "nx": 11,
+        "nix": 31,
+        "shouldAffect": 13
+      },
+      "disagreements": [
+        {
+          "file": "apps/cli/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/report/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/web/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/ast/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-a/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-b/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-c/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-d/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/collections/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/compiler/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/lexer/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/logging/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/orphan/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/parser/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/runtime/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/strings/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/test-utils/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/tokens/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "pnpm-workspace.yaml",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        }
+      ],
+      "missedByNx": [
+        {
+          "file": "package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "pnpm-workspace.yaml",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        }
+      ],
+      "missedByNix": [],
+      "rows": [
+        {
+          "file": "apps/cli/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/report/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/web/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/ast/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-a/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-b/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-c/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-d/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/collections/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/compiler/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/core/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/src/hash.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/src/outcome.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/tests/hash.test.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/tests/outcome.test.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/vitest.config.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/lexer/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/logging/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/orphan/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/parser/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/runtime/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/strings/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/test-utils/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/tokens/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "pnpm-lock.yaml",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "pnpm-workspace.yaml",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "tsconfig.base.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "vitest.shared.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        }
+      ]
+    },
+    "orphan": {
+      "project": "@nx-exp/orphan",
+      "counts": {
+        "nx": 9,
+        "nix": 29,
+        "shouldAffect": 11
+      },
+      "disagreements": [
+        {
+          "file": "apps/cli/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/report/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/web/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/ast/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-a/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-b/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-c/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-d/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/collections/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/compiler/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/core/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/lexer/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/logging/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/parser/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/runtime/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/strings/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/test-utils/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/tokens/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "pnpm-workspace.yaml",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        }
+      ],
+      "missedByNx": [
+        {
+          "file": "package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "pnpm-workspace.yaml",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        }
+      ],
+      "missedByNix": [],
+      "rows": [
+        {
+          "file": "apps/cli/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/report/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/web/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/ast/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-a/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-b/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-c/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-d/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/collections/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/compiler/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/core/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/lexer/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/logging/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/orphan/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/orphan/src/base32.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/orphan/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/orphan/tests/base32.test.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/orphan/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/orphan/vitest.config.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/parser/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/runtime/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/strings/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/test-utils/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/tokens/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "pnpm-lock.yaml",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "pnpm-workspace.yaml",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "tsconfig.base.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "vitest.shared.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        }
+      ]
+    },
+    "runtime": {
+      "project": "@nx-exp/runtime",
+      "counts": {
+        "nx": 56,
+        "nix": 66,
+        "shouldAffect": 58
+      },
+      "disagreements": [
+        {
+          "file": "apps/cli/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/report/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/web/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/chain-a/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-b/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-c/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-d/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/orphan/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "pnpm-workspace.yaml",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        }
+      ],
+      "missedByNx": [
+        {
+          "file": "package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "pnpm-workspace.yaml",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        }
+      ],
+      "missedByNix": [],
+      "rows": [
+        {
+          "file": "apps/cli/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/report/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/web/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/ast/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/ast/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/ast/src/nodes.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/ast/src/walk.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/ast/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/chain-a/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-b/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-c/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-d/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/collections/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/collections/src/chunk.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/collections/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/collections/src/multimap.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/collections/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/compiler/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/compiler/src/compile.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/compiler/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/compiler/src/instructions.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/compiler/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/src/hash.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/src/outcome.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/lexer/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/lexer/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/lexer/src/lexer.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/lexer/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/logging/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/logging/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/logging/src/logger.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/logging/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/orphan/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/parser/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/parser/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/parser/src/parser.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/parser/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/runtime/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/runtime/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/runtime/src/vm.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/runtime/tests/agreement.test.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/runtime/tests/vm.test.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/runtime/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/runtime/vitest.config.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/strings/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/strings/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/strings/src/pad.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/strings/src/slug.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/strings/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/test-utils/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/test-utils/src/expressions.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/test-utils/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/test-utils/src/random.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/test-utils/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/tokens/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/tokens/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/tokens/src/token.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/tokens/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "pnpm-lock.yaml",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "pnpm-workspace.yaml",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "tsconfig.base.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "vitest.shared.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        }
+      ]
+    },
+    "parser": {
+      "project": "@nx-exp/parser",
+      "counts": {
+        "nx": 43,
+        "nix": 56,
+        "shouldAffect": 45
+      },
+      "disagreements": [
+        {
+          "file": "apps/cli/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/report/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/web/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/chain-a/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-b/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-c/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-d/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/compiler/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/logging/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/orphan/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/runtime/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "pnpm-workspace.yaml",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        }
+      ],
+      "missedByNx": [
+        {
+          "file": "package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "pnpm-workspace.yaml",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        }
+      ],
+      "missedByNix": [],
+      "rows": [
+        {
+          "file": "apps/cli/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/report/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "apps/web/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/ast/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/ast/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/ast/src/nodes.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/ast/src/walk.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/ast/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/chain-a/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-b/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-c/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/chain-d/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/collections/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/collections/src/chunk.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/collections/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/collections/src/multimap.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/collections/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/compiler/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/core/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/src/hash.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/src/outcome.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/core/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/lexer/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/lexer/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/lexer/src/lexer.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/lexer/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/logging/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/orphan/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/parser/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/parser/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/parser/src/parser.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/parser/tests/parser.test.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/parser/tests/roundtrip.test.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/parser/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/parser/vitest.config.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/runtime/package.json",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": false
+        },
+        {
+          "file": "packages/strings/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/strings/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/strings/src/pad.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/strings/src/slug.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/strings/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/test-utils/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/test-utils/src/expressions.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/test-utils/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/test-utils/src/random.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/test-utils/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/tokens/package.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/tokens/src/index.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/tokens/src/token.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "packages/tokens/tsconfig.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "pnpm-lock.yaml",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "pnpm-workspace.yaml",
+          "nx": false,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "tsconfig.base.json",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        },
+        {
+          "file": "vitest.shared.ts",
+          "nx": true,
+          "nix": true,
+          "shouldAffect": true
+        }
+      ]
+    }
+  }
+}

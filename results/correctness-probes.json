@@ -1,0 +1,47 @@
+[
+  {
+    "id": "undeclared-import",
+    "description": "a leaf package imports a workspace package its manifest does not declare",
+    "measured": {
+      "buildDerivationSucceeds": false,
+      "testDerivationSucceeds": false,
+      "graphGuardSucceeds": true,
+      "nx": {
+        "edges": [],
+        "undeclared": []
+      }
+    }
+  },
+  {
+    "id": "type-error-in-leaf",
+    "description": "a type error in a leaf package, in code no test exercises",
+    "measured": {
+      "buildDerivationSucceeds": false,
+      "testDerivationSucceeds": true,
+      "graphGuardSucceeds": true
+    }
+  },
+  {
+    "id": "tsconfig-path-alias-across-packages",
+    "description": "a package reaches into another package through a tsconfig paths alias, with nothing in its manifest",
+    "measured": {
+      "buildDerivationSucceeds": false,
+      "testDerivationSucceeds": false,
+      "graphGuardSucceeds": true,
+      "nx": {
+        "edges": [],
+        "undeclared": []
+      }
+    }
+  },
+  {
+    "id": "generated-source",
+    "description": "a source file produced by a generator and not committed, imported by committed code",
+    "measured": {
+      "buildDerivationSucceeds": false,
+      "testDerivationSucceeds": false,
+      "graphGuardSucceeds": true,
+      "generatedFileIsTrackedByGit": false
+    }
+  }
+]

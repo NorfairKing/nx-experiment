@@ -1,0 +1,137 @@
+{
+  "levels": [
+    {
+      "id": "per-package",
+      "prefix": "test-",
+      "description": "one Vitest derivation per package",
+      "nodeCount": 19,
+      "evaluationMs": 521
+    },
+    {
+      "id": "per-test-file",
+      "prefix": "file-",
+      "description": "one derivation per test file, whole tests directory as input",
+      "nodeCount": 27,
+      "evaluationMs": 446
+    },
+    {
+      "id": "per-test-file-narrow",
+      "prefix": "narrow-",
+      "description": "one derivation per test file, only that file as input",
+      "nodeCount": 27,
+      "evaluationMs": 468
+    }
+  ],
+  "invalidation": [
+    {
+      "id": "one-test-file",
+      "file": "packages/core/tests/hash.test.ts",
+      "levels": {
+        "per-package": {
+          "invalidated": 1,
+          "total": 19,
+          "attrs": [
+            "test-core"
+          ]
+        },
+        "per-test-file": {
+          "invalidated": 2,
+          "total": 27,
+          "attrs": [
+            "file-core--tests-hash-test-ts",
+            "file-core--tests-outcome-test-ts"
+          ]
+        },
+        "per-test-file-narrow": {
+          "invalidated": 1,
+          "total": 27,
+          "attrs": [
+            "narrow-core--tests-hash-test-ts"
+          ]
+        }
+      }
+    },
+    {
+      "id": "shared-source",
+      "file": "packages/core/src/hash.ts",
+      "levels": {
+        "per-package": {
+          "invalidated": 14,
+          "total": 19,
+          "attrs": [
+            "test-ast",
+            "test-cli",
+            "test-collections",
+            "test-compiler",
+            "test-core",
+            "test-lexer",
+            "test-logging",
+            "test-parser",
+            "test-report",
+            "test-runtime",
+            "test-strings",
+            "test-test-utils",
+            "test-tokens",
+            "test-web"
+          ]
+        },
+        "per-test-file": {
+          "invalidated": 22,
+          "total": 27,
+          "attrs": [
+            "file-ast--tests-nodes-test-ts",
+            "file-ast--tests-walk-test-ts",
+            "file-cli--tests-cli-test-ts",
+            "file-collections--tests-chunk-test-ts",
+            "file-collections--tests-multimap-test-ts",
+            "file-compiler--tests-compile-test-ts",
+            "file-core--tests-hash-test-ts",
+            "file-core--tests-outcome-test-ts",
+            "file-lexer--tests-lexer-test-ts",
+            "file-lexer--tests-throughput-test-ts",
+            "file-logging--tests-logger-test-ts",
+            "file-parser--tests-parser-test-ts",
+            "file-parser--tests-roundtrip-test-ts",
+            "file-report--tests-report-test-ts",
+            "file-runtime--tests-agreement-test-ts",
+            "file-runtime--tests-vm-test-ts",
+            "file-strings--tests-pad-test-ts",
+            "file-strings--tests-slug-test-ts",
+            "file-test-utils--tests-expressions-test-ts",
+            "file-test-utils--tests-random-test-ts",
+            "file-tokens--tests-token-test-ts",
+            "file-web--tests-render-test-ts"
+          ]
+        },
+        "per-test-file-narrow": {
+          "invalidated": 22,
+          "total": 27,
+          "attrs": [
+            "narrow-ast--tests-nodes-test-ts",
+            "narrow-ast--tests-walk-test-ts",
+            "narrow-cli--tests-cli-test-ts",
+            "narrow-collections--tests-chunk-test-ts",
+            "narrow-collections--tests-multimap-test-ts",
+            "narrow-compiler--tests-compile-test-ts",
+            "narrow-core--tests-hash-test-ts",
+            "narrow-core--tests-outcome-test-ts",
+            "narrow-lexer--tests-lexer-test-ts",
+            "narrow-lexer--tests-throughput-test-ts",
+            "narrow-logging--tests-logger-test-ts",
+            "narrow-parser--tests-parser-test-ts",
+            "narrow-parser--tests-roundtrip-test-ts",
+            "narrow-report--tests-report-test-ts",
+            "narrow-runtime--tests-agreement-test-ts",
+            "narrow-runtime--tests-vm-test-ts",
+            "narrow-strings--tests-pad-test-ts",
+            "narrow-strings--tests-slug-test-ts",
+            "narrow-test-utils--tests-expressions-test-ts",
+            "narrow-test-utils--tests-random-test-ts",
+            "narrow-tokens--tests-token-test-ts",
+            "narrow-web--tests-render-test-ts"
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,5 +1,19 @@
 node_modules/
 .nx/
 dist/
+
+# What `nix build` symlinks to.
 result
 result-*
+
+# A global gitignore that carries the Nix convention as `result*` rather than
+# `result` also swallows this directory, and with it every measurement the
+# findings cite. The same pattern already cost this experiment a test file: it
+# hid packages/core/tests/result.test.ts from Nx's atomizer, which then
+# generated no target for it. Unignore it explicitly.
+!results/
+
+# Regenerable intermediates rather than measurements: `nx graph --file` output,
+# distilled into the committed nix/projects.json.
+results/nx-graph.json
+results/nx-graph-export.json
