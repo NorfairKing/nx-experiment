@@ -62,7 +62,16 @@ for (const [name, node] of Object.entries(graph.nodes)) {
   }
 }
 
-const output = { generatedFrom: exportPath, projects }
+// Sorted, because this file is checked in: an unordered generated file makes
+// every regeneration look like a change.
+const output = {
+  generatedFrom: exportPath,
+  projects: Object.fromEntries(
+    Object.keys(projects)
+      .sort()
+      .map((attr) => [attr, projects[attr]]),
+  ),
+}
 
 mkdirSync(dirname(outputPath), { recursive: true })
 writeFileSync(outputPath, `${JSON.stringify(output, null, 2)}\n`)

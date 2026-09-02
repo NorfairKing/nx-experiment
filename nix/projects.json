@@ -1,8 +1,5 @@
 {
-  "generatedFrom": {
-    "nxVersion": "23.2.0",
-    "graph": "results/nx-graph.json"
-  },
+  "generatedFrom": "results/nx-graph-export.json",
   "projects": {
     "ast": {
       "name": "@nx-exp/ast",

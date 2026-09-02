@@ -147,6 +147,12 @@ any file whose name starts with `result` disappears from Nx's view.
 
 The failure is silent in the dangerous direction: fewer tests, still green.
 
+This repository therefore sets `discoverTestFiles: "vitest"`, which enumerates
+through Vitest itself and finds both files. It costs more at graph-creation time
+(Nx boots Vitest per project rather than globbing an index) and it is the right
+trade: the glob is an approximation of Vitest's resolution, and where they
+disagree the approximation loses tests.
+
 ## What Nix expresses well, and what it does not
 
 ### A per-package output must carry its own node_modules
@@ -289,23 +295,63 @@ be adversarial rather than derived from the same source as the list.
 
 ## Cost
 
-Nix is much slower for a full cold run, and this should not be glossed over.
+Nix is several times slower for a full run, and this should not be glossed over.
 
-| | derivations / tasks | cold | cached |
+| | units | cold | cached |
 |---|---:|---:|---:|
-| Nix, per package | 19 | see `results/benchmark.json` | ~60 ms |
-| Nix, per test file | 27 | | ~100 ms |
-| Nx `run-many -t test` | 19 | ~7.3 s | ~1.3 s |
-| Nx atomized per-file tasks | 27 | ~4.7 s | |
+| Nix, per package | 19 | 23.4 s | 93 ms |
+| Nix, per test file | 27 | 32.9 s | 96 ms |
+| Nix, per test file, narrow | 27 | 32.4 s | 99 ms |
+| Nx `run-many -t test` | 19 | 7.3 s | 522 ms |
+| Nx atomized per-file tasks | 27 | 3.8 s | — |
 
-Each Nix derivation unpacks its own source, rebuilds the workspace skeleton,
-links node_modules and boots Vitest from scratch, inside a sandbox. Nx runs one
-process per project against a workspace that already exists. Nix buys isolation
-and a shared, content-addressed cache; it does not buy speed on a cold run.
+Cold means the outputs were deleted first. `keep-outputs` is on in this store,
+which keeps an output alive for as long as its derivation is alive, so the first
+attempts at this measurement deleted nothing and reported 93 ms as a "cold"
+build; `results/benchmark.json` records how many outputs each run actually
+removed so that cannot pass unnoticed again.
 
-The cached numbers are the other half of the story: once built, "run all the
-tests" is a store lookup in tens of milliseconds, and it is correct rather than
-trusting a local cache directory.
+Divide through and the interesting number appears — **fixed cost per unit of
+work**:
+
+|  | per unit |
+|---|---:|
+| Nix derivation | ~1.23 s (19 → 1.23, 27 → 1.22) |
+| Nx task, per package | ~384 ms |
+| Nx task, per test file | ~141 ms |
+
+Most of these test files run in about 150 ms, so for Nix the fixed cost is an
+order of magnitude larger than the work. Each derivation unpacks its own
+source, rebuilds the workspace skeleton, links `node_modules` and boots Vitest
+from scratch inside a sandbox; Nx runs one process against a workspace that
+already exists.
+
+This is what decides whether atomization pays, and it cuts opposite ways in the
+two systems. Splitting 19 units into 27 made **Nx faster** (7.3 s → 3.8 s: the
+slow files stop being stuck behind a package-level task) and **Nix slower**
+(23.4 s → 32.9 s: eight more skeletons to build). Per-test-file granularity is
+not good or bad in itself; it pays exactly when the per-unit fixed cost is
+small relative to the test, and the obvious next piece of work on the Nix side
+is to shrink that 1.23 s rather than to add more derivations.
+
+The incremental case, which is what a developer actually experiences, is worse
+still. After one edit to `packages/core/src/hash.ts`:
+
+| | |
+|---|---:|
+| `nix build` every test | 47.8 s |
+| `nx affected -t test` | 0.68 s |
+
+Nix rebuilds 14 test derivations *and* the 14 `tsc` outputs beneath them, from
+scratch, in sandboxes. Nx recompiles the same packages incrementally and reuses
+its cache for the rest.
+
+So the honest summary of cost: **Nix buys correctness, isolation and a shared
+content-addressed cache; it does not buy speed.** On this workspace it is
+roughly 3× slower cold and 70× slower on a one-file change. The cached numbers
+are the other half of the story — once built, "run every test" is a store
+lookup in under 100 ms, and it is trustworthy rather than dependent on a local
+cache directory — but nobody should adopt this expecting a faster inner loop.
 
 ## How hard is the transfer
 

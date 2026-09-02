@@ -55,7 +55,7 @@
         "ciTargetName": "test-ci",
         "ciGroupName": "test-ci-group",
         "testMode": "run",
-        "discoverTestFiles": "glob"
+        "discoverTestFiles": "vitest"
       }
     }
   ]
