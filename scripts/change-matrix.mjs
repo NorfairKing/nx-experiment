@@ -151,7 +151,9 @@ const restore = (mutation) => {
     run('git', ['reset', '--quiet', '--', mutation.file])
     rmSync(mutation.file, { force: true })
   } else {
-    run('git', ['checkout', '--', mutation.file])
+    // The file was staged so Nix would see it, so both the index and the
+    // working tree have to come back from HEAD.
+    run('git', ['restore', '--staged', '--worktree', '--', mutation.file])
   }
 }
 
