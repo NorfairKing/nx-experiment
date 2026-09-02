@@ -13,10 +13,14 @@
 #                 setup files, so a package whose tests share code cannot use
 #                 it.
 #
-# Both variants trust nix/projects.json's enumeration of test files. That
-# enumeration is the only place this design can fail silently: a test file
+# Both variants trust an enumeration of test files, which nix/graph.nix builds
+# by walking the tests directory. That is an approximation of what Vitest would
+# discover, and it is the only place this design can fail silently: a test file
 # missing from the list simply gets no derivation, and the remaining
-# derivations all pass. `guards` below is the check that closes that hole.
+# derivations all pass. `guards` below asks Vitest itself and closes the hole.
+#
+# Per-package granularity avoids the problem entirely, because `vitest run`
+# discovers its own files. That is one reason to prefer it.
 { lib
 , stdenvNoCC
 , nodejs
@@ -71,8 +75,8 @@ let
 
   # Asks Vitest which files it would run and fails if that disagrees with the
   # enumeration the per-file derivations were generated from. Without this, a
-  # test file absent from nix/projects.json is simply never run and nothing
-  # reports a problem.
+  # test file the enumeration missed is simply never run and nothing reports a
+  # problem.
   mkGuard = builds: attr: project: stdenvNoCC.mkDerivation {
     name = "nx-exp-${attr}-test-enumeration";
     src = toSource "nx-exp-${attr}-enumeration-src" (lib.fileset.unions
@@ -116,7 +120,7 @@ let
     const extra = discovered.filter((file) => !expected.includes(file))
 
     if (missing.length > 0 || extra.length > 0) {
-      console.error("test file enumeration disagrees with nix/projects.json")
+      console.error("test file enumeration disagrees with what Vitest would run")
       if (extra.length > 0) {
         console.error("  vitest runs these, no derivation exists: " + extra.join(", "))
       }

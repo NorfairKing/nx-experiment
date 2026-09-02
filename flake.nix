@@ -31,7 +31,7 @@
       packages.${system} =
         {
           inherit (nxExperiment)
-            installInputs pnpmDeps nodeModules allTests graphAgreement;
+            installInputs pnpmDeps nodeModules allTests workspaceProjects;
         }
         # Prototype 1 and 2: one derivation per package.
         // prefixed "build" nxExperiment.builds
@@ -51,9 +51,9 @@
           };
         };
 
-        # nix/projects.json is a checked-in cache of a semantic analysis, and a
-        # project missing from it silently gets no derivation at all.
-        inherit (nxExperiment) graphAgreement;
+        # Nix restates the pnpm workspace globs, because it cannot read YAML.
+        # A project outside those globs would get no derivations at all.
+        inherit (nxExperiment) workspaceProjects;
       }
       # Every package's tests, and the check that the per-test-file enumeration
       # still matches what Vitest itself discovers.

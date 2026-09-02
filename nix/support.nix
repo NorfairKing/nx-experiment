@@ -7,7 +7,9 @@
 rec {
   repoRoot = ../.;
 
-  table = builtins.fromJSON (builtins.readFile ./projects.json);
+  # The project graph, derived from the workspace manifests during evaluation.
+  # No generated file, no Nx, and no import-from-derivation.
+  table = import ./graph.nix { inherit lib; };
 
   # Workspace-root files reached through a relative path. They are split
   # because tsc and Vitest do not read the same ones: every package's tsconfig

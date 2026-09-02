@@ -1,64 +1,70 @@
-# The staleness guard for the dependency edges.
+# The one thing Nix has to take on trust, checked against pnpm.
 #
-# nix/projects.json is a checked-in cache of a semantic analysis. When it drifts
-# from the workspace, the failure direction is not symmetric:
+# nix/graph.nix derives the project graph from the workspace manifests during
+# evaluation, which needs no Nx, no generated file and no
+# import-from-derivation. The manifests are the graph in a pnpm workspace with
+# isolated linking: an import of an undeclared workspace package does not
+# resolve, so it is a hard build error rather than a missing edge. See
+# results/correctness-probes.json.
 #
-#   an edge in projects.json that reality lacks    over-approximates; runs too
-#                                                  much; harmless
-#   an edge reality has that projects.json lacks   the dependency's store path
-#                                                  is not linked, so tsc or
-#                                                  Vitest cannot resolve the
-#                                                  import: loud
-#   a project missing from projects.json entirely  no derivation is generated,
-#                                                  so its tests never run and
-#                                                  nothing reports a problem:
-#                                                  SILENT
+# What Nix cannot read is pnpm-workspace.yaml, for want of a YAML parser, so
+# graph.nix restates the workspace globs. Drift there is the one remaining
+# silent failure: a project outside Nix's globs gets no derivations and nothing
+# notices. This derivation closes that by asking pnpm, which reads that file
+# itself.
 #
-# The silent case is the one worth a guard. This derivation rebuilds the project
-# table from the manifests alone — discovered by globbing the source tree, not
-# read from any Nix-side list — and fails when it disagrees with the checked-in
-# table.
-#
-# It is deliberately independent of Nx. A guard generated from the same source
-# as the data it checks proves only that the generator is deterministic. This
-# one would notice a project Nx never reported, or a project Nx reported and the
-# bridge dropped.
-#
-# What it does not check is whether the manifests match what the source actually
-# imports. That is what the build derivations check, since pnpm's strict layout
-# and these derivations' hand-built node_modules both make an undeclared import
-# a hard resolution error. Both are in `nix flake check`.
+# The other guards cover the rest: `build-*` catches an import the manifests do
+# not declare, because these derivations link only declared dependencies, and
+# `guard-*` in nix/per-test-file.nix catches a test file Vitest would run that
+# no derivation covers.
 { lib
 , stdenvNoCC
 , nodejs
+, pnpm
 , support
-, workspace
 }:
 let
-  inherit (support) table;
+  inherit (support) table repoRoot;
 
-  checkGraph = ../scripts/check-graph-agreement.mjs;
+  # Every manifest in the repository, not only those under Nix's globs, so pnpm
+  # can find a project Nix missed.
+  everyManifest = lib.fileset.unions [
+    (lib.fileset.fileFilter (file: file.name == "package.json") repoRoot)
+    (repoRoot + "/pnpm-workspace.yaml")
+  ];
 in
 stdenvNoCC.mkDerivation {
-  name = "nx-exp-graph-agreement";
+  name = "nx-exp-workspace-projects";
 
-  # The reduced manifests, whose own project list comes from readDir over the
-  # source tree rather than from nix/projects.json.
-  src = workspace.installInputs;
+  src = lib.fileset.toSource {
+    root = repoRoot;
+    fileset = everyManifest;
+  };
 
-  nativeBuildInputs = [ nodejs ];
+  nativeBuildInputs = [ nodejs pnpm ];
   dontPatchELF = true;
   dontStrip = true;
 
-  expected = builtins.toJSON (lib.mapAttrs
-    (_: project: {
-      inherit (project) name root runtimeDeps devDeps;
-    })
-    table.projects);
+  expectedRoots = lib.concatStringsSep "\n"
+    (lib.mapAttrsToList (_: project: project.root) table.projects);
+
+  graphSource = table.source;
 
   buildPhase = ''
     runHook preBuild
-    node ${checkGraph} | tee $TMPDIR/guard.log
+
+    export HOME=$TMPDIR
+    # The root manifest pins a packageManager, and pnpm 11 tries to fetch that
+    # exact version before doing anything. There is no network in here, and the
+    # pnpm on PATH is the one we want. nixpkgs' own pnpm fetcher sets the same
+    # variable for the same reason.
+    export pnpm_config_pm_on_fail=ignore
+    export pnpm_config_update_notifier=false
+    export pnpm_config_offline=true
+
+    echo "graph derived from: $graphSource"
+    node ${../scripts/check-workspace-projects.mjs} | tee $TMPDIR/guard.log
+
     runHook postBuild
   '';
 

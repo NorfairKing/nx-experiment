@@ -1,4 +1,12 @@
-// Translates Nx's graph into the project table the Nix prototypes read.
+// Translates Nx's graph into a project table for nix/graph.nix to use instead
+// of deriving one from the manifests.
+//
+// This is the OPTIONAL path. By default nix/graph.nix reads the manifests
+// during evaluation, which produces a byte-identical set of derivations at the
+// same evaluation cost, with no generated file to keep in sync. Write this
+// table to nix/projects.json only if the manifests stop being the graph — a
+// hoisted node_modules where phantom imports resolve, or a workspace whose
+// edges come from tsconfig path aliases rather than package boundaries.
 //
 // The input is the graph Nx exports through its documented command:
 //
