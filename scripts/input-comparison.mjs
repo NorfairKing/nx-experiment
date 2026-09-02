@@ -123,9 +123,21 @@ const buildSrcFilesOf = (attr) => {
   return buildSrcCache.get(attr)
 }
 
+// Every test derivation depends on the pnpm install, so the files that install
+// reads are inputs to every test. They enter as reduced manifests rather than
+// verbatim: only the dependency-relevant fields of each package.json are read,
+// so a description change in any manifest is not an input even though the file
+// is listed here.
+const installInputFiles = () => [
+  'pnpm-workspace.yaml',
+  'pnpm-lock.yaml',
+  'package.json',
+  ...Object.values(table).map((project) => `${project.root}/package.json`),
+]
+
 const nixInputsFor = (attr) => {
   const project = table[attr]
-  const files = new Set(srcFilesOf(`test-${attr}`))
+  const files = new Set([...srcFilesOf(`test-${attr}`), ...installInputFiles()])
   // Dependency sources reach the test only through the build derivations its
   // closure references.
   const pending = [...project.runtimeDeps, ...project.devDeps]

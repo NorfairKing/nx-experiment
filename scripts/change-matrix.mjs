@@ -144,6 +144,22 @@ const mutations = [
     apply: (file) => appendFileSync(file, '\n# touched\n'),
   },
   {
+    id: 'root-manifest',
+    description: 'the root package.json, which pins the vitest and tsc versions',
+    file: 'package.json',
+    apply: (file) => {
+      const meta = JSON.parse(readFileSync(file, 'utf8'))
+      meta.devDependencies.vitest = '4.1.10'
+      writeFileSync(file, `${JSON.stringify(meta, null, 2)}\n`)
+    },
+  },
+  {
+    id: 'workspace-yaml',
+    description: 'pnpm-workspace.yaml, which decides what a workspace package is',
+    file: 'pnpm-workspace.yaml',
+    apply: (file) => appendFileSync(file, '\n# touched\n'),
+  },
+  {
     id: 'readme',
     description: 'a new README in one package',
     file: 'packages/orphan/README.md',
