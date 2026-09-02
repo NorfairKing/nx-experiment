@@ -85,18 +85,7 @@ let
     '';
   };
 
-  # The coarse alternative, kept for comparison: every manifest verbatim, so
-  # any edit to any manifest invalidates the install and everything after it.
-  wholeManifests = lib.fileset.toSource {
-    inherit root;
-    fileset = lib.fileset.unions ([
-      (root + "/package.json")
-      (root + "/pnpm-workspace.yaml")
-      (root + "/pnpm-lock.yaml")
-    ]
-    ++ map (projectRoot: root + "/${projectRoot}/package.json") projectRoots);
-  };
 in
 {
-  inherit installInputs wholeManifests pnpmDeps nodeModules projectRoots;
+  inherit installInputs pnpmDeps nodeModules;
 }

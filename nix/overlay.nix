@@ -8,7 +8,7 @@ final: _prev: {
         perPackage.builds;
     in
     {
-      inherit (workspace) installInputs wholeManifests pnpmDeps nodeModules;
+      inherit (workspace) installInputs pnpmDeps nodeModules;
       inherit (perPackage) builds tests allTests;
       inherit (perTestFile) perFile perFileNarrow guards;
     };

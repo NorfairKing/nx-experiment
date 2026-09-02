@@ -31,7 +31,7 @@
       packages.${system} =
         {
           inherit (nxExperiment)
-            installInputs wholeManifests pnpmDeps nodeModules allTests;
+            installInputs pnpmDeps nodeModules allTests;
         }
         # Prototype 1 and 2: one derivation per package.
         // prefixed "build" nxExperiment.builds

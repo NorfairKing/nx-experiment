@@ -90,7 +90,7 @@ let
       node_bin=$(command -v node)
       cd ${project.root}
       "$vitest" list --filesOnly --json > $TMPDIR/discovered.json
-      "$node_bin" ${checkEnumeration} $TMPDIR/discovered.json | tee $TMPDIR/summary
+      "$node_bin" ${checkEnumeration} $TMPDIR/discovered.json | tee $TMPDIR/test.log
 
       runHook postBuild
     '';
