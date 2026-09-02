@@ -18,12 +18,19 @@ Half a day, and it decides the architecture. FINDINGS.md has the full list with
 consequences; the two that matter most:
 
 ```bash
-pnpm config get node-linker            # want: isolated (the default)
+# Does an undeclared import resolve? It must not.
+cd packages/<any-package> && node -e "require.resolve('@scope/<not-a-dependency>')"
+#   want: MODULE_NOT_FOUND, exit 1
+#   `pnpm config get node-linker` is not the check: it prints `undefined` in
+#   the normal passing case, so the answer looks like an error.
+
+# Does any tsconfig path mapping cross a project boundary?
 grep -rn '"paths"' tsconfig*.json */*/tsconfig.json
+#   want: no output (grep exits 1, which means "found nothing")
 ```
 
-If linking is **isolated** and no path mapping crosses a project boundary, the
-manifests are the graph and you need no Nx at all. If either fails, Nx's
+If an undeclared import fails to resolve and no path mapping crosses a project
+boundary, the manifests are the graph and you need no Nx at all. If either fails, Nx's
 analysis is load-bearing: generate a table with `scripts/nx-to-nix.mjs` and
 drop it at `nix/projects.json`, which `nix/graph.nix` picks up automatically.
 

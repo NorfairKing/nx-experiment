@@ -891,36 +891,60 @@ it — a per-derivation post-build hook above all.
 
 ## Preconditions: what this recipe assumes about a repository
 
-The recommendation above is conditional, and these are the conditions. Each has
-a check that takes one command, and a consequence if it fails.
+The recommendation above is conditional, and these are the conditions. Every
+command below has been run against this workspace and the output shown is the
+real one, because a check whose output you cannot interpret is worse than no
+check.
 
-### 1. pnpm with isolated linking
+### 1. An undeclared import does not resolve
 
 *Why it matters:* the whole case for architecture A is that the manifests are
 the graph. That holds because pnpm links only a package's declared
-dependencies, so an undeclared import does not resolve — it is a hard build
-error rather than a missing edge.
+dependencies, so an import nobody declared fails rather than quietly working.
 
-*Check:* `pnpm config get node-linker` (and `nodeLinker` in
-`pnpm-workspace.yaml`). Expect `isolated`, the default.
+*Check:* pick a package and a workspace package it does **not** depend on, and
+ask Node to resolve it from there.
 
-*If it fails:* under `hoisted`, phantom imports resolve, the manifests
-under-report, and Nix would generate a graph that is missing real edges —
-silently. Switch to architecture C: generate the table from Nx and drop it at
+```bash
+cd packages/<a-package>
+node -e "require.resolve('@scope/<something-it-does-not-declare>')"
+```
+
+*Passing:* it fails, `MODULE_NOT_FOUND`, exit 1. Confirm the test is meaningful
+by repeating it for a package the manifest *does* declare, which should print a
+path.
+
+*Do not use `pnpm config get node-linker` for this.* It prints `undefined` when
+the setting is absent, which is the normal, passing case — the default is
+`isolated` — so the answer looks like an error and tells you nothing about the
+tree that actually got installed. The resolution test measures the property the
+recipe depends on.
+
+*If it fails:* under a hoisted layout phantom imports resolve, the manifests
+under-report, and Nix would generate a graph missing real edges — silently.
+Switch to architecture C: generate the table from Nx and drop it at
 `nix/projects.json`.
 
 ### 2. Workspace edges come from package boundaries, not path aliases
 
-*Why it matters:* if a project reaches into another through a `tsconfig`
-`paths` alias rather than a dependency, no manifest records the edge.
+*Why it matters:* if a project reaches into another through a `tsconfig` `paths`
+mapping rather than a dependency, no manifest records the edge.
 
-*Check:* `grep -r '"paths"' tsconfig*.json packages/*/tsconfig.json` and see
-whether any mapping points outside its own project.
+*Check:*
 
-*If it fails:* the manifests are not the graph. Architecture C, and verify Nx
-actually reports those edges — in this workspace it reported *none* for a
-cross-package alias (`results/correctness-probes.json`), so confirm before
-relying on it.
+```bash
+grep -rn '"paths"' tsconfig*.json */*/tsconfig.json
+```
+
+*Passing:* no output, and `grep` exits 1. Exit 1 here means "found nothing",
+not "the command failed". If there is output, read each mapping and check
+whether its target lies outside the project that declares it — a mapping to
+`./src/*` is harmless.
+
+*If it fails:* the manifests are not the graph. Architecture C, and confirm Nx
+actually reports those edges before relying on it: in this workspace it
+reported **none** for a cross-package alias
+(`results/correctness-probes.json`).
 
 ### 3. Tests import source, not the built output
 
@@ -928,45 +952,79 @@ relying on it.
 package's build, which is a real precision win — but only because the tests
 import `../src/…` directly.
 
-*Check:* grep the test files for imports of the package's own name.
+*Check:*
 
-*If it fails:* add the package's own build to its test derivation's inputs. Cost
-is one extra edge per package, no loss of correctness.
+```bash
+for d in packages/*/ apps/*/; do
+  name=$(jq -r .name "$d/package.json")
+  grep -l "from '$name'" "$d"/tests/*.ts 2>/dev/null
+done
+```
 
-### 4. One build and one test target per project
+*Passing:* no output. Any file listed is a test importing its own package by
+name, which resolves through `node_modules` to the built output.
+
+*If it fails:* add the package's own build to its test derivation's inputs. One
+extra edge per package, no loss of correctness.
+
+### 4. One `build` target and one `test` target per project
 
 *Why it matters:* it is what makes the task graph redundant with the project
 graph, and what keeps the derivation count at 2N.
 
-*Check:* `nx show project <name> --json | jq '.targets | keys'` on a few
-projects.
+*Check:*
 
-*If it fails:* more targets per project is where architecture D might earn its
-place. It was never built here, so treat it as unexplored rather than rejected.
+```bash
+nx show project <a-project> --json | jq -c '[.targets | keys[]]'
+```
 
-### 5. No generated sources, or they are committed
+*Passing:* exactly one build-ish and one test-ish target. Expect more entries
+than that and do not be alarmed — this workspace prints
 
-*Why it matters:* Nix's filesets come from the git tree, and so does Nx's file
-index. Neither sees an uncommitted generated file.
+```
+["build","test","test-ci","test-ci--tests/hash.test.ts","test-ci--tests/outcome.test.ts","nx-release-publish"]
+```
 
-*Check:* look for a codegen step in the build scripts.
+where `test-ci*` are the atomizer's derived per-file targets and
+`nx-release-publish` is Nx's own. The question is whether there is more than
+one *distinct thing to build* and more than one *distinct way to test*.
 
-*If it fails:* either commit the generated sources or generate them inside the
+*If it fails:* several real targets per project is where architecture D might
+earn its place. It was never built here, so treat it as unexplored rather than
+rejected.
+
+### 5 and 6. `tsc` is the builder, and no uncommitted generated sources
+
+*Why they matter:* the build derivations run `tsc -p tsconfig.json` and treat
+`dist/` as the output. And Nix's filesets come from the git tree, as does Nx's
+file index, so neither sees an uncommitted generated file.
+
+*Check:* one command answers both — read every build script at once.
+
+```bash
+jq -r -s 'map(.scripts.build) | group_by(.) | map({script: .[0], count: length})' \
+  packages/*/package.json apps/*/package.json
+```
+
+*Passing:* a single group, and that group is a plain compile. Here:
+
+```json
+[{ "script": "tsc -p tsconfig.json", "count": 19 }]
+```
+
+Several groups is fine as long as you read them; a `&&` chain, a `node
+scripts/codegen.mjs` prefix, or anything writing into `src/` is the failing
+shape.
+
+*If `tsc` is not the builder:* substitute the real one, and keep two things —
+the precise fileset, which is only justified while the builder declares its
+inputs, and the deletion of positional artifacts such as source maps, without
+which content-addressed early cutoff cannot work.
+
+*If sources are generated:* either commit them or generate them inside the
 derivation. An uncommitted generated import fails loudly
-(`results/correctness-probes.json`), so this cannot pass silently — but it will
+(`results/correctness-probes.json`), so it cannot pass silently — but it will
 stop the build.
-
-### 6. `tsc` is the builder
-
-*Why it matters:* the build derivations run `tsc -p tsconfig.json` and treat
-`dist/` as the output.
-
-*Check:* the `build` script in a package manifest.
-
-*If it fails:* substitute the real builder. Keep two things: the precise
-fileset, which is only justified while the builder declares its inputs, and
-the deletion of positional artifacts such as source maps, without which
-content-addressed early cutoff cannot work.
 
 ### 7. Whether a post-build hook uploads to a cache
 
@@ -974,32 +1032,23 @@ content-addressed early cutoff cannot work.
 found in this experiment, and it is charged per derivation, so it interacts
 directly with the granularity choice.
 
-*Check:* `nix config show post-build-hook`.
+*Check:*
+
+```bash
+nix config show post-build-hook
+```
+
+*Passing:* empty output. Here it prints a store path to an upload script, which
+is the failing shape:
+
+```
+/nix/store/…-upload-to-nix-ci-staging-cache
+```
 
 *If it is set:* count derivations before choosing a finer granularity. On this
-machine it cost roughly 2 s each, which is more than everything else a
-derivation does put together.
-
-## Does it compose?
-
-The question the brief asked was whether Nx's semantic graph plus Nix's
-reproducible derivation model is more powerful than either alone. For a pnpm
-workspace the answer is that the question dissolves: there is no semantic graph
-to add, because Nx's graph *is* the manifests, and Nix can read those.
-
-Where the two do meet, they do not fight. They answer different questions — Nx
-answers "what depends on what", once, offline; Nix answers "what must be
-rebuilt", every time, from content — and feeding the first into the second
-worked, producing derivations identical to deriving it directly.
-
-The caveat applies to whichever route you take, because **a graph Nix inferred
-is still an inference, and wrong inferences are silent.** Whether the table
-comes from Nx and is checked in, or from the manifests during evaluation, the
-failure direction is the same: fewer tests, all green. That is what the guards
-are for, and it takes three separate checks because the question has three
-parts. Deriving the graph in the evaluator removes one class of staleness — a
-generated file nobody regenerated — and relocates the rest to the workspace
-globs Nix restates because it cannot read YAML.
+machine it cost about 1.8 s each, more than everything else a derivation does
+put together, and it is why every measurement in this document passes
+`--option post-build-hook ""`.
 
 ## Lessons about measuring a Nix build
 
