@@ -49,6 +49,12 @@ const nxAffectedProjects = () => {
   return JSON.parse(raw).sort()
 }
 
+// Nx's task hash is the fair counterpart to a Nix derivation path: both decide
+// whether the unit of work is reused. Project-level affectedness is recorded
+// too, because that is what selects tasks before any hash is consulted.
+const nxTaskHashes = () =>
+  JSON.parse(run('node', ['scripts/dump-nx-hashes.mjs', 'test']))
+
 const nxAffectedTestTasks = () => {
   const raw = run('pnpm', [
     'exec',
@@ -167,6 +173,7 @@ const assertClean = () => {
 assertClean()
 
 const baselineDrvPaths = nixDrvPaths()
+const baselineTaskHashes = nxTaskHashes()
 const baselineProjects = Object.keys(baselineDrvPaths)
   .filter((attr) => attr.startsWith('test-'))
   .map((attr) => attr.slice('test-'.length))
@@ -190,6 +197,13 @@ for (const mutation of mutations) {
 
   const affected = nxAffectedProjects()
   const affectedTests = nxAffectedTestTasks()
+  const taskHashes = nxTaskHashes()
+  const rehashed = (suffix) =>
+    Object.keys(baselineTaskHashes)
+      .filter((id) => id.endsWith(suffix))
+      .filter((id) => taskHashes[id] !== baselineTaskHashes[id])
+      .map((id) => id.replace(/^@nx-exp\//, '').replace(suffix, ''))
+      .sort()
 
   const result = {
     id: mutation.id,
@@ -198,6 +212,8 @@ for (const mutation of mutations) {
     nx: {
       affectedProjects: affected.map((n) => n.replace(/^@nx-exp\//, '')),
       affectedTestProjects: affectedTests.map((n) => n.replace(/^@nx-exp\//, '')),
+      rehashedBuildTasks: rehashed(':build'),
+      rehashedTestTasks: rehashed(':test'),
     },
     nix: {
       invalidatedBuilds: changed('build-'),
@@ -205,9 +221,12 @@ for (const mutation of mutations) {
     },
   }
   results.push(result)
+  const n = (count) => String(count).padStart(2)
   console.error(
-    `${mutation.id.padEnd(28)} nx affected tests: ${String(result.nx.affectedTestProjects.length).padStart(2)}/${baselineProjects.length}` +
-      `   nix invalidated tests: ${String(result.nix.invalidatedTests.length).padStart(2)}/${baselineProjects.length}`,
+    `${mutation.id.padEnd(28)} nx affected ${n(result.nx.affectedTestProjects.length)}` +
+      `  nx rehashed ${n(result.nx.rehashedTestTasks.length)}` +
+      `  nix invalidated ${n(result.nix.invalidatedTests.length)}` +
+      `   (of ${baselineProjects.length})`,
   )
 
   restore(mutation)
@@ -216,6 +235,14 @@ for (const mutation of mutations) {
 
 const output = {
   totalProjects: baselineProjects.length,
+  legend: {
+    nxAffectedProjects:
+      'projects nx show projects --affected reports; project-level, ignores target inputs',
+    nxRehashedTestTasks:
+      'test tasks whose Nx task hash changed; the unit Nx actually reuses or reruns',
+    nixInvalidatedTests:
+      'test derivations whose .drv path changed; the unit Nix actually reuses or rebuilds',
+  },
   projects: baselineProjects,
   changes: results,
 }
