@@ -196,55 +196,64 @@ const baselineProjects = Object.keys(baselineDrvPaths)
 
 console.error(`baseline: ${baselineProjects.length} test derivations`)
 
+// A mutation that aborts mid-measurement must still be undone: a half-applied
+// manifest edit makes pnpm rewrite the lockfile on the next install, and that
+// then looks like a deliberate change.
 const results = []
 for (const mutation of mutations) {
-  mutation.apply(mutation.file)
-  // Nix reads the git tree, so a new file has to be staged to be seen at all.
-  run('git', ['add', '--', mutation.file])
+  try {
+    mutation.apply(mutation.file)
+    // Nix reads the git tree, so a new file has to be staged to be seen at all.
+    run('git', ['add', '--', mutation.file])
 
-  const drvPaths = nixDrvPaths()
-  const changed = (prefix) =>
-    Object.keys(baselineDrvPaths)
-      .filter((attr) => attr.startsWith(prefix))
-      .filter((attr) => drvPaths[attr] !== baselineDrvPaths[attr])
-      .map((attr) => attr.slice(prefix.length))
-      .sort()
+    const drvPaths = nixDrvPaths()
+    const changed = (prefix) =>
+      Object.keys(baselineDrvPaths)
+        .filter((attr) => attr.startsWith(prefix))
+        .filter((attr) => drvPaths[attr] !== baselineDrvPaths[attr])
+        .map((attr) => attr.slice(prefix.length))
+        .sort()
 
-  const affected = nxAffectedProjects()
-  const affectedTests = nxAffectedTestTasks()
-  const taskHashes = nxTaskHashes()
-  const rehashed = (suffix) =>
-    Object.keys(baselineTaskHashes)
-      .filter((id) => id.endsWith(suffix))
-      .filter((id) => taskHashes[id] !== baselineTaskHashes[id])
-      .map((id) => id.replace(/^@nx-exp\//, '').replace(suffix, ''))
-      .sort()
+    const affected = nxAffectedProjects()
+    const affectedTests = nxAffectedTestTasks()
+    const taskHashes = nxTaskHashes()
+    const rehashed = (suffix) =>
+      Object.keys(baselineTaskHashes)
+        .filter((id) => id.endsWith(suffix))
+        .filter((id) => taskHashes[id] !== baselineTaskHashes[id])
+        .map((id) => id.replace(/^@nx-exp\//, '').replace(suffix, ''))
+        .sort()
 
-  const result = {
-    id: mutation.id,
-    description: mutation.description,
-    file: mutation.file,
-    nx: {
-      affectedProjects: affected.map((n) => n.replace(/^@nx-exp\//, '')),
-      affectedTestProjects: affectedTests.map((n) => n.replace(/^@nx-exp\//, '')),
-      rehashedBuildTasks: rehashed(':build'),
-      rehashedTestTasks: rehashed(':test'),
-    },
-    nix: {
-      invalidatedBuilds: changed('build-'),
-      invalidatedTests: changed('test-'),
-    },
+    const result = {
+      id: mutation.id,
+      description: mutation.description,
+      file: mutation.file,
+      nx: {
+        affectedProjects: affected.map((n) => n.replace(/^@nx-exp\//, '')),
+        affectedTestProjects: affectedTests.map((n) => n.replace(/^@nx-exp\//, '')),
+        rehashedBuildTasks: rehashed(':build'),
+        rehashedTestTasks: rehashed(':test'),
+      },
+      nix: {
+        invalidatedBuilds: changed('build-'),
+        invalidatedTests: changed('test-'),
+      },
+    }
+    results.push(result)
+    const n = (count) => String(count).padStart(2)
+    console.error(
+      `${mutation.id.padEnd(28)} nx affected ${n(result.nx.affectedTestProjects.length)}` +
+        `  nx rehashed ${n(result.nx.rehashedTestTasks.length)}` +
+        `  nix invalidated ${n(result.nix.invalidatedTests.length)}` +
+        `   (of ${baselineProjects.length})`,
+    )
+
+  } finally {
+    restore(mutation)
+    // pnpm rewrites the lockfile when a manifest disagrees with it, so restore
+    // anything else that moved as well.
+    run('git', ['checkout', '--', '.'])
   }
-  results.push(result)
-  const n = (count) => String(count).padStart(2)
-  console.error(
-    `${mutation.id.padEnd(28)} nx affected ${n(result.nx.affectedTestProjects.length)}` +
-      `  nx rehashed ${n(result.nx.rehashedTestTasks.length)}` +
-      `  nix invalidated ${n(result.nix.invalidatedTests.length)}` +
-      `   (of ${baselineProjects.length})`,
-  )
-
-  restore(mutation)
   assertClean()
 }
 
