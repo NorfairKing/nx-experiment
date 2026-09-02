@@ -211,6 +211,33 @@ run('node_modules/.bin/nx', ['run', '@nx-exp/orphan:test'])
   }
 }
 
+// Where the per-unit cost goes. Evaluation is measured with --dry-run, which
+// evaluates and builds nothing; Vitest is measured in the live workspace, which
+// is the irreducible part. What is left over is stdenv plus assembling the
+// package's tree, and it is the only part a shared workspace skeleton could
+// ever have recovered.
+{
+  const restore = mutate(LEAF_SOURCE)
+  try {
+    results.nix.leafEvaluationOnlyMs = time(
+      'nix, evaluation only (--dry-run), one leaf',
+      () =>
+        run('nix', [
+          'build',
+          '--dry-run',
+          ...NIX_OPTIONS,
+          '.#test-orphan',
+        ]),
+    )
+  } finally {
+    restore()
+  }
+}
+
+results.nix.vitestAloneMs = time('vitest alone, in the live workspace', () =>
+  run('bash', ['-c', 'cd packages/orphan && ../../node_modules/.bin/vitest run']),
+)
+
 run('node_modules/.bin/nx', ['reset'])
 results.nx.runManyColdMs = time('nx run-many -t test (empty nx cache)', () =>
   run('node_modules/.bin/nx', ['run-many', '-t', 'test']),
