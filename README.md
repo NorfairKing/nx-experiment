@@ -69,8 +69,11 @@ nix build .#allTests                      # every package's tests
 nix build .#file-core--tests-hash-test-ts     # whole tests/ as input
 nix build .#narrow-core--tests-hash-test-ts   # only that file as input
 
-# The guard that keeps the per-test-file enumeration honest.
+# The guards. `guard-<project>` checks that the per-test-file enumeration still
+# matches what Vitest itself discovers; `graphAgreement` checks that
+# nix/projects.json still matches the workspace manifests.
 nix build .#guard-core
+nix build .#graphAgreement
 ```
 
 `nix flake check` builds every per-package test and every guard.
@@ -98,7 +101,12 @@ graph, but it reaches into `nx/src/...` internals to get Nx's task inputs and
 hashes, and exists for the comparison experiments rather than for the bridge.
 
 A stale `nix/projects.json` fails in the unsafe direction — fewer tests, still
-green. The guard derivations catch it for test files:
+green. Three checks close that, because the question has three parts: whether
+every project and edge is still in the table (`graphAgreement`, from the
+manifests), whether the declared edges are the ones the source imports
+(`build-*`, via pnpm-strict resolution and `tsc`), and whether every test file
+is represented (`guard-*`, from Vitest's own enumeration). To run just the test
+file guards:
 
 ```bash
 nix build $(nix eval --json .#packages.x86_64-linux \
@@ -112,11 +120,12 @@ Each writes machine-readable output to `results/`. They mutate tracked files and
 restore them, so the working tree must be clean before running one.
 
 ```bash
-node scripts/change-matrix.mjs      # results/change-matrix.json
-node scripts/granularity.mjs        # results/granularity.json
-node scripts/benchmark.mjs          # results/benchmark.json
-node scripts/input-comparison.mjs   # results/input-comparison.json
-node scripts/dump-nx-hashes.mjs     # Nx task hashes, to stdout
+node scripts/change-matrix.mjs        # results/change-matrix.json
+node scripts/granularity.mjs          # results/granularity.json
+node scripts/benchmark.mjs            # results/benchmark.json
+node scripts/input-comparison.mjs     # results/input-comparison.json
+node scripts/correctness-probes.mjs   # results/correctness-probes.json
+node scripts/dump-nx-hashes.mjs       # Nx task hashes, to stdout
 ```
 
 - **change-matrix** applies 13 classes of change and records, for each, which
@@ -124,8 +133,16 @@ node scripts/dump-nx-hashes.mjs     # Nx task hashes, to stdout
   derivation paths changed. This is the main result.
 - **granularity** measures node count, evaluation time and invalidation at each
   of the three granularity levels.
-- **benchmark** times a cold and a cached run of each level, and the Nx
-  baseline.
+- **benchmark** times the cached case, one unit of work, and a rebuild after a
+  shared-source edit, against the Nx baseline. It does **not** measure a
+  from-source build: doing that meant deleting outputs, and `nix store delete`
+  runs a `/nix/store/.links` pass that took the machine down on a store
+  deduplicating a couple of hundred gigabytes. The script says so in a comment;
+  please leave it that way.
+- **correctness-probes** deliberately breaks four things — an undeclared
+  import, a type error no test exercises, a cross-package `tsconfig` `paths`
+  alias, an uncommitted generated source — and records which mechanism notices
+  each.
 - **input-comparison** classifies every file in the repository as an input to a
   given package's test according to Nx, according to Nix, and according to what
   should actually affect it.
@@ -162,6 +179,7 @@ nix/workspace.nix         pnpm dependency closure and the install
 nix/support.nix           machinery shared by the prototypes
 nix/per-package.nix       prototype 1 and 2
 nix/per-test-file.nix     prototype 3, plus the enumeration guards
+nix/graph-guard.nix       the check that nix/projects.json has not drifted
 nix/projects.json         generated: the bridge from Nx to Nix
 scripts/                  graph export, the bridge, and the four experiments
 results/                  measurements

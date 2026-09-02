@@ -1,33 +1,30 @@
 {
+  "maxJobs": 4,
   "nix": {
     "per-package": {
       "derivations": 19,
-      "outputsDeletedBeforeColdRun": "19/19",
-      "coldMs": 23370,
-      "cachedMs": 93
+      "cachedMs": 64
     },
     "per-test-file": {
       "derivations": 27,
-      "outputsDeletedBeforeColdRun": "27/27",
-      "coldMs": 32908,
-      "cachedMs": 96
+      "cachedMs": 72
     },
     "per-test-file-narrow": {
       "derivations": 27,
-      "outputsDeletedBeforeColdRun": "27/27",
-      "coldMs": 32354,
-      "cachedMs": 99
+      "cachedMs": 65
     },
-    "incrementalSharedSourceMs": 47837
+    "incrementalSharedSourceMs": 45873,
+    "singleLeafDerivationMs": 3061
   },
   "nx": {
-    "incrementalSharedSourceMs": 682,
-    "runManyColdMs": 7335,
-    "runManyWarmMs": 522,
+    "incrementalSharedSourceMs": 6525,
+    "singleLeafTaskMs": 890,
+    "runManyColdMs": 6517,
+    "runManyWarmMs": 471,
     "atomizedTaskCount": 27,
     "atomizedTargetNames": 26,
     "groupTargetRunsLocally": false,
     "groupTargetRefusal": "refused",
-    "atomizedColdMs": 3814
+    "atomizedColdMs": 3473
   }
 }

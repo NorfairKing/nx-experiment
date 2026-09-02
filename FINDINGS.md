@@ -427,63 +427,93 @@ would have to commit them or generate them inside the derivation.
 
 ## Cost
 
-Nix is several times slower for a full run, and this should not be glossed over.
+Nix is several times slower, and this should not be glossed over. It is also the
+part of this document that took the longest to measure honestly, because two
+successive attempts measured the wrong thing.
 
-| | units | cold | cached |
-|---|---:|---:|---:|
-| Nix, per package | 19 | 23.4 s | 93 ms |
-| Nix, per test file | 27 | 32.9 s | 96 ms |
-| Nix, per test file, narrow | 27 | 32.4 s | 99 ms |
-| Nx `run-many -t test` | 19 | 7.3 s | 522 ms |
-| Nx atomized per-file tasks | 27 | 3.8 s | — |
+### What is measured, and what is not
 
-Cold means the outputs were deleted first. `keep-outputs` is on in this store,
-which keeps an output alive for as long as its derivation is alive, so the first
-attempts at this measurement deleted nothing and reported 93 ms as a "cold"
-build; `results/benchmark.json` records how many outputs each run actually
-removed so that cannot pass unnoticed again.
+**A full from-source build is not measured.** The first method deleted the
+outputs and timed a rebuild. It was wrong twice over. It deleted only the *test*
+outputs and left every `tsc` output in the store, so "cold" meant "everything
+except the compilation" and drifted with whatever an earlier run had left
+behind: the same per-package figure came out at **23 s on one run and 80 s on
+the next**, and per-test-file at 33 s then 161 s. Numbers that disagree with
+themselves by 5× are not measurements.
 
-Divide through and the interesting number appears — **fixed cost per unit of
-work**:
+Extending the deletion to the build outputs would have made it well defined,
+and that is where the second problem appeared: `nix store delete` scans every
+GC root and then runs a "deleting unused links" pass over `/nix/store/.links`.
+On the machine this ran on, that store deduplicates 206 GiB. Calling it once
+per output path, seventy-odd times per run, alongside parallel builds, took the
+machine down. `scripts/benchmark.mjs` no longer touches the store, and carries
+a comment saying why not to put it back.
 
-|  | per unit |
+So the cold column is simply absent. Everything below needs no deletion: a
+unique edit per run produces derivations nothing has built before, which is
+real work measured without disturbing anything. Builds run at `--max-jobs 4`.
+
+### The numbers
+
+| | Nix | Nx |
+|---|---:|---:|
+| every test, nothing to do | **64 ms** | 471 ms |
+| one leaf unit, after an edit to it | 3.06 s | 0.89 s |
+| every test, after an edit to the shared foundation | 45.9 s | 6.5 s |
+| every test, empty cache, no Nix comparison available | — | 6.5 s |
+| atomized per-file tasks, empty cache | — | 3.5 s |
+
+Two of those correct earlier drafts of this document, both in the same way.
+This section previously claimed Nx's incremental figure was 0.68 s and that Nix
+was "70× slower on a one-file change". That 0.68 s was Nx serving a cache hit:
+the harness appended identical text every run, so it kept reproducing an edit
+Nx had already seen. The same bug ran in Nix's favour elsewhere, reporting
+1.3 s for work that recompiles fourteen packages. With the edit made unique per
+run, both systems do real work and the gap is **about 7×, not 70×**.
+
+### Fixed cost per unit of work
+
+Measured directly rather than divided out of a total: an isolated leaf package
+whose tests take single-digit milliseconds, edited uniquely, so what is left is
+almost entirely overhead.
+
+| | one unit |
 |---|---:|
-| Nix derivation | ~1.23 s (19 → 1.23, 27 → 1.22) |
-| Nx task, per package | ~384 ms |
-| Nx task, per test file | ~141 ms |
+| Nix test derivation | 3.06 s |
+| Nx test task | 0.89 s |
 
-Most of these test files run in about 150 ms, so for Nix the fixed cost is an
-order of magnitude larger than the work. Each derivation unpacks its own
-source, rebuilds the workspace skeleton, links `node_modules` and boots Vitest
-from scratch inside a sandbox; Nx runs one process against a workspace that
-already exists.
+Against roughly 5 ms of actual assertions in that package, Nix's overhead is
+about three orders of magnitude larger than the work, and about 3.4× Nx's. Each
+derivation unpacks its own source, rebuilds the workspace skeleton, links
+`node_modules` and boots Vitest from scratch inside a sandbox; Nx runs one
+process against a workspace that already exists.
 
-This is what decides whether atomization pays, and it cuts opposite ways in the
-two systems. Splitting 19 units into 27 made **Nx faster** (7.3 s → 3.8 s: the
-slow files stop being stuck behind a package-level task) and **Nix slower**
-(23.4 s → 32.9 s: eight more skeletons to build). Per-test-file granularity is
-not good or bad in itself; it pays exactly when the per-unit fixed cost is
-small relative to the test, and the obvious next piece of work on the Nix side
-is to shrink that 1.23 s rather than to add more derivations.
+This is what decides whether atomization pays, and it cuts opposite ways.
+Splitting 19 units into 27 made **Nx faster**, 6.5 s → 3.5 s, because the slow
+files stop being stuck behind a package-level task. For **Nix** the same split
+adds eight more units at 3.06 s of overhead each — around 24 s of pure
+overhead — while buying almost no invalidation (the granularity table above:
+22/27 against 14/19 for a source change). That the Nix side of this is an
+inference from the per-unit cost rather than a measured total is the direct
+consequence of withdrawing the cold column; it is stated as an inference
+deliberately.
 
-The incremental case, which is what a developer actually experiences, is worse
-still. After one edit to `packages/core/src/hash.ts`:
+Per-test-file granularity is therefore not good or bad in itself. It pays
+exactly when the per-unit fixed cost is small relative to the test, and the
+first thing to do on the Nix side is shrink that 3.06 s, not add more
+derivations.
 
-| | |
-|---|---:|
-| `nix build` every test | 47.8 s |
-| `nx affected -t test` | 0.68 s |
+### The honest summary
 
-Nix rebuilds 14 test derivations *and* the 14 `tsc` outputs beneath them, from
-scratch, in sandboxes. Nx recompiles the same packages incrementally and reuses
-its cache for the rest.
+**Nix buys correctness, isolation and a shared content-addressed cache; it does
+not buy speed.** On this workspace it is about 7× slower on a one-file change
+and 3.4× slower per unit of work. Nobody should adopt this expecting a faster
+inner loop.
 
-So the honest summary of cost: **Nix buys correctness, isolation and a shared
-content-addressed cache; it does not buy speed.** On this workspace it is
-roughly 3× slower cold and 70× slower on a one-file change. The cached numbers
-are the other half of the story — once built, "run every test" is a store
-lookup in under 100 ms, and it is trustworthy rather than dependent on a local
-cache directory — but nobody should adopt this expecting a faster inner loop.
+The one column where it wins is worth noting: with everything built, "run every
+test" is a store lookup in **64 ms** against Nx's 471 ms, and the Nix answer is
+trustworthy rather than dependent on a local cache directory whose inputs
+somebody had to declare correctly.
 
 ## How hard is the transfer
 
@@ -596,8 +626,11 @@ checks because the question has three parts.
   motivating case for the install, but `__contentAddressed` would give early
   cutoff for build outputs too, where a comment-only source edit currently
   rebuilds every dependent's tests even though `tsc`'s output is unchanged.
-- The ~1.23 s fixed cost per Nix derivation is the thing to attack before
-  adding any more derivations. Each one rebuilds the workspace skeleton from
-  scratch; sharing it is untried.
+- The 3.06 s fixed cost per Nix derivation is the thing to attack before adding
+  any more derivations. Each one rebuilds the workspace skeleton from scratch;
+  sharing it is untried.
+- A full from-source build time for the Nix side, measured in a way that does
+  not involve deleting from a shared store. A throwaway store under
+  `--store /tmp/...` would work and was not tried.
 - Prototype 4 (the Nx task graph becoming Nix derivations) is argued against
   below from the shape of the data rather than measured. It was never built.
