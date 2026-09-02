@@ -1,0 +1,71 @@
+{
+  "totalFilesTracked": 126,
+  "typescriptFilesTracked": 88,
+  "filesCarryingDependencies": 16,
+  "filesCarryingDependenciesThatAreManifests": 16,
+  "typescriptFilesCarryingDependencies": 0,
+  "attribution": {
+    "apps/cli/package.json": [
+      "@nx-exp/logging",
+      "@nx-exp/runtime"
+    ],
+    "packages/ast/package.json": [
+      "@nx-exp/collections",
+      "@nx-exp/tokens"
+    ],
+    "packages/chain-a/package.json": [
+      "@nx-exp/chain-b"
+    ],
+    "packages/test-utils/package.json": [
+      "@nx-exp/core"
+    ],
+    "packages/lexer/package.json": [
+      "@nx-exp/strings",
+      "@nx-exp/test-utils",
+      "@nx-exp/tokens"
+    ],
+    "packages/logging/package.json": [
+      "@nx-exp/core"
+    ],
+    "packages/strings/package.json": [
+      "@nx-exp/core"
+    ],
+    "packages/compiler/package.json": [
+      "@nx-exp/ast",
+      "@nx-exp/logging",
+      "@nx-exp/parser"
+    ],
+    "packages/runtime/package.json": [
+      "@nx-exp/collections",
+      "@nx-exp/compiler",
+      "@nx-exp/test-utils"
+    ],
+    "apps/web/package.json": [
+      "@nx-exp/runtime",
+      "@nx-exp/strings"
+    ],
+    "packages/chain-b/package.json": [
+      "@nx-exp/chain-c"
+    ],
+    "packages/chain-c/package.json": [
+      "@nx-exp/chain-d"
+    ],
+    "packages/tokens/package.json": [
+      "@nx-exp/core"
+    ],
+    "apps/report/package.json": [
+      "@nx-exp/collections",
+      "@nx-exp/compiler"
+    ],
+    "packages/collections/package.json": [
+      "@nx-exp/core"
+    ],
+    "packages/parser/package.json": [
+      "@nx-exp/ast",
+      "@nx-exp/lexer",
+      "@nx-exp/test-utils",
+      "@nx-exp/tokens"
+    ]
+  },
+  "conclusion": "Every workspace edge is attributed to the project manifest; no TypeScript file carries any. In a pnpm workspace Nx knows dependencies at exactly one level, project to project, and derives them from the manifests."
+}
