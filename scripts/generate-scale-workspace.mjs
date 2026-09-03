@@ -19,6 +19,10 @@ import { dirname, join } from 'node:path'
 
 const count = Number(process.argv[2] ?? 50)
 const outDir = process.argv[3] ?? `scale/${count}`
+// "varied" gives packages uneven module counts, test-file counts and file
+// lengths, to check whether a uniform synthetic workspace understates
+// evaluation cost.
+const varied = process.argv[4] === 'varied'
 const SCOPE = '@nx-exp'
 
 if (!Number.isInteger(count) || count < 8) {
@@ -194,30 +198,67 @@ for (const [index, project] of projects.entries()) {
     .join('\n')
   const sum = deps.length > 0 ? deps.map((_, i) => `dep${i}`).join(' + ') : '0'
 
-  write(
-    join(outDir, root, 'src', 'index.ts'),
-    `${imports}${imports ? '\n\n' : ''}` +
-      `export const value: number = ${index} + ${sum}\n\n` +
-      `export function scale_${identifier}(n: number): number {\n` +
-      `  let total = value\n` +
-      `  for (let i = 0; i < n; i++) total += (i * ${index + 1}) % 7\n` +
-      `  return total\n` +
-      `}\n`,
-  )
+  // With variation on, packages differ in how many modules and test files they
+  // hold and how long each file is. Evaluation copies every project directory
+  // into the store, so file count and size are what could make a real workspace
+  // evaluate differently from a uniform synthetic one. Derived from the index,
+  // so it stays deterministic.
+  const localModules = varied ? 1 + (index % 8) : 1
+  const testFiles = varied ? 1 + (index % 3) : 1
+  const padLines = varied ? 20 + (index % 5) * 60 : 0
+
+  const padding = (label) =>
+    padLines === 0
+      ? ''
+      : '\n' +
+        Array.from(
+          { length: padLines },
+          (_, i) => `const ${label}_pad_${i}: number = ${(i * 7 + index) % 101}`,
+        ).join('\n') +
+        '\n'
+
+  // Local modules, each importing the previous one, so a package has import
+  // depth of its own rather than only cross-package edges.
+  for (let m = 0; m < localModules; m++) {
+    const previous = m === 0 ? null : `./mod${m - 1}.js`
+    write(
+      join(outDir, root, 'src', `mod${m}.ts`),
+      (previous ? `import { step as previous } from '${previous}'\n\n` : '') +
+        `export function step(n: number): number {\n` +
+        `  return ${previous ? 'previous(n)' : 'n'} + ${m + 1}\n` +
+        `}\n` +
+        padding(`mod${m}`),
+    )
+  }
 
   write(
-    join(outDir, root, 'tests', 'value.test.ts'),
-    `import { describe, expect, it } from 'vitest'\n` +
-      `import { value, scale_${identifier} } from '../src/index.js'\n\n` +
-      `describe('${project.name}', () => {\n` +
-      `  it('sums its own index with its dependencies', () => {\n` +
-      `    expect(value).toBeGreaterThanOrEqual(${index})\n` +
-      `  })\n\n` +
-      `  it('accumulates deterministically', () => {\n` +
-      `    expect(scale_${identifier}(10)).toBe(scale_${identifier}(10))\n` +
-      `  })\n` +
-      `})\n`,
+    join(outDir, root, 'src', 'index.ts'),
+    `${imports}${imports ? '\n' : ''}` +
+      `import { step } from './mod${localModules - 1}.js'\n\n` +
+      `export const value: number = ${index} + ${sum}\n\n` +
+      `export function scale_${identifier}(n: number): number {\n` +
+      `  let total = value + step(n)\n` +
+      `  for (let i = 0; i < n; i++) total += (i * ${index + 1}) % 7\n` +
+      `  return total\n` +
+      `}\n` +
+      padding('index'),
   )
+
+  for (let t = 0; t < testFiles; t++) {
+    write(
+      join(outDir, root, 'tests', `part${t}.test.ts`),
+      `import { describe, expect, it } from 'vitest'\n` +
+        `import { value, scale_${identifier} } from '../src/index.js'\n\n` +
+        `describe('${project.name} part ${t}', () => {\n` +
+        `  it('sums its own index with its dependencies', () => {\n` +
+        `    expect(value).toBeGreaterThanOrEqual(${index})\n` +
+        `  })\n\n` +
+        `  it('accumulates deterministically', () => {\n` +
+        `    expect(scale_${identifier}(${t + 10})).toBe(scale_${identifier}(${t + 10}))\n` +
+        `  })\n` +
+        `})\n`,
+    )
+  }
 }
 
 const edges = projects.reduce(

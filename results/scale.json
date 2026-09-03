@@ -7,55 +7,73 @@
       "projects": 24,
       "derivations": 48,
       "evaluationMs": {
-        "min": 107,
-        "median": 107,
-        "max": 115
+        "min": 96,
+        "median": 98,
+        "max": 102
       },
-      "msPerProject": 4.5
+      "msPerProject": 4.1
     },
     {
       "requested": 50,
       "projects": 48,
       "derivations": 96,
       "evaluationMs": {
-        "min": 112,
-        "median": 114,
-        "max": 119
+        "min": 99,
+        "median": 100,
+        "max": 148
       },
-      "msPerProject": 2.4
+      "msPerProject": 2.1
     },
     {
       "requested": 100,
       "projects": 97,
       "derivations": 194,
       "evaluationMs": {
-        "min": 116,
-        "median": 116,
-        "max": 128
+        "min": 102,
+        "median": 103,
+        "max": 112
       },
-      "msPerProject": 1.2
+      "msPerProject": 1.1
     },
     {
       "requested": 200,
       "projects": 195,
       "derivations": 390,
       "evaluationMs": {
-        "min": 124,
-        "median": 128,
-        "max": 147
+        "min": 119,
+        "median": 121,
+        "max": 134
       },
-      "msPerProject": 0.7
+      "msPerProject": 0.6
     },
     {
       "requested": 400,
       "projects": 389,
       "derivations": 778,
       "evaluationMs": {
-        "min": 145,
-        "median": 148,
-        "max": 179
+        "min": 137,
+        "median": 143,
+        "max": 177
       },
       "msPerProject": 0.4
     }
-  ]
+  ],
+  "variation": {
+    "note": "Same project count, uniform small packages against uneven larger ones, to test whether evaluation cost tracks source size or only project count.",
+    "requestedProjects": 200,
+    "shapes": [
+      {
+        "shape": "uniform",
+        "sourceBytes": 177117,
+        "derivations": 390,
+        "evaluationMs": 121
+      },
+      {
+        "shape": "varied",
+        "sourceBytes": 4996143,
+        "derivations": 390,
+        "evaluationMs": 132
+      }
+    ]
+  }
 }

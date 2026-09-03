@@ -46,6 +46,36 @@ const measure = (dir) => {
   return { derivations, times: times.sort((a, b) => a - b) }
 }
 
+// Does package size matter, or only project count? Evaluation copies each
+// project directory into the store, so a workspace of large uneven packages
+// could cost more than a uniform synthetic one. Measured at one size, both
+// ways, rather than left as a caveat.
+const measureVariation = (size) => {
+  const shapes = ['uniform', 'varied'].map((shape) => {
+    const dir = `scale/${shape}-${size}`
+    run('node', [
+      'scripts/generate-scale-workspace.mjs',
+      String(size),
+      dir,
+      ...(shape === 'varied' ? ['varied'] : []),
+    ])
+    const sourceBytes = Number(
+      run('bash', [
+        '-c',
+        `find ${dir} -name '*.ts' -exec cat {} + | wc -c`,
+      ]).trim(),
+    )
+    const { derivations, times } = measure(dir)
+    const median = times[Math.floor(times.length / 2)]
+    console.error(
+      `${shape.padEnd(8)} ${String(sourceBytes).padStart(8)} source bytes  ` +
+        `${String(derivations).padStart(4)} derivations  eval ${String(median).padStart(5)} ms`,
+    )
+    return { shape, sourceBytes, derivations, evaluationMs: median }
+  })
+  return shapes
+}
+
 const results = []
 for (const size of sizes) {
   const dir = `scale/${size}`
@@ -78,6 +108,9 @@ for (const size of sizes) {
   void projects
 }
 
+const VARIATION_SIZE = 200
+const variation = measureVariation(VARIATION_SIZE)
+
 mkdirSync(dirname(outputPath), { recursive: true })
 writeFileSync(
   outputPath,
@@ -88,6 +121,13 @@ writeFileSync(
         'median reported. Derivations counts one build and one test per project.',
       runsPerSize: RUNS,
       sizes: results,
+      variation: {
+        note:
+          'Same project count, uniform small packages against uneven larger ones, ' +
+          'to test whether evaluation cost tracks source size or only project count.',
+        requestedProjects: VARIATION_SIZE,
+        shapes: variation,
+      },
     },
     null,
     2,

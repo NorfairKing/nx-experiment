@@ -863,15 +863,32 @@ forced.
 
 | projects | derivations | evaluation (median) | ms per project |
 |---:|---:|---:|---:|
-| 24 | 48 | 107 ms | 4.5 |
-| 48 | 96 | 114 ms | 2.4 |
-| 97 | 194 | 116 ms | 1.2 |
-| 195 | 390 | 128 ms | 0.7 |
-| 389 | 778 | 148 ms | 0.4 |
+| 24 | 48 | 98 ms | 4.1 |
+| 48 | 96 | 100 ms | 2.1 |
+| 97 | 194 | 103 ms | 1.1 |
+| 195 | 390 | 121 ms | 0.6 |
+| 389 | 778 | 143 ms | 0.4 |
 
-**Sixteen times the projects costs about 1.4× the evaluation.** Marginal cost
-is roughly 0.11 ms per project, and per-project cost falls by an order of
+**Sixteen times the projects costs about 1.5× the evaluation.** Marginal cost is
+roughly 0.12 ms per project, and per-project cost falls by an order of
 magnitude across the range — the signature of a fixed cost dominating.
+
+### Nor does package size matter much
+
+Evaluation copies every project directory into the store, so a workspace of
+large uneven packages could plausibly cost more than a uniform synthetic one.
+Measured at the same project count, one uniform and one with packages varying
+from 2 to 9 modules and files from 20 to 260 lines:
+
+| shape | source | evaluation |
+|---|---:|---:|
+| uniform | 177 KB | 121 ms |
+| varied | 5.0 MB | 132 ms |
+
+**Twenty-eight times the source costs 9%.** So evaluation tracks project count
+weakly and source size weaklier still. What this does not model is a deep
+cross-package import graph — the generated one is layered but shallow — and
+`tsconfig` project references, which would give `tsc` real work to order.
 
 Checked against the measurement mistakes this document has already made:
 forcing all 778 build and test derivation paths on a never-evaluated workspace
@@ -1118,11 +1135,10 @@ something being there.
 - Whether that per-unit gap matters in practice, given that Nix wins on every
   aggregate case. It is the number an editor-driven loop hits, so probably yes,
   and roughly half of it is evaluation rather than work.
-- The scaling measurement is synthetic. It has the right dependency shapes and
-  the right project count, but every generated package is small and similar. A
-  real workspace with uneven package sizes and deeper import graphs could
-  evaluate differently, though the flatness of the curve — dominated by fixed
-  cost — suggests not by much.
+- The scaling measurement is synthetic. Package size has now been tested and
+  costs 9% for 28× the source, so that half of the caveat is closed. What
+  remains untested is a *deep* cross-package import graph and `tsconfig`
+  project references; the generated workspace is layered but shallow.
 - A from-source build including the toolchain was considered and **not**
   measured, deliberately. It would mean building into a throwaway store under
   `--store /tmp/...`, and the number would be dominated by populating that

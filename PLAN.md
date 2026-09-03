@@ -9,7 +9,7 @@ The original ask had three criteria. Where they landed:
 | criterion | result |
 |---|---|
 | avoids IFD if possible | **yes, for free** — the graph is derived in the evaluator; verified with `allow-import-from-derivation false` |
-| evaluates quickly | **yes** — 148 ms at 389 projects, 16× the projects for 1.4× the time |
+| evaluates quickly | **yes** — **143 ms at 389 projects**, 16× the projects for 1.5× the time |
 | maximises granularity of rebuilds | **per package is the frontier** — per-test-file barely improves invalidation (22/27 vs 14/19) and adds a hazard |
 
 ## Phase 0 — check the preconditions first

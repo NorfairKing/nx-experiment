@@ -75,7 +75,7 @@ up if present. (`scripts/dump-nx.mjs` does reach into `nx/src/...` internals,
 but only to measure Nx's task hashes for the comparison; nothing built depends
 on it.)
 
-**Evaluation is flat in project count.** 107 ms at 24 projects, 148 ms at 389,
+**Evaluation is flat in project count.** 98 ms at 24 projects, 143 ms at 389,
 with all derivations forced. Criterion 2 is satisfied to at least 400 projects.
 
 **The two models agree on 11 of 13 change classes.** Both divergences favour
@@ -129,8 +129,9 @@ that is one invocation's evaluation. With the upload hook that same unit costs
 
 **Evaluation dominates the per-unit cost and is flat in workspace size.** Of
 1177 ms for one leaf test derivation: 816 ms evaluation, 292 ms Vitest, 69 ms
-stdenv and tree assembly. Evaluation goes 107 ms at 24 projects to 148 ms at
-389, so it is a fixed cost per invocation rather than per project.
+stdenv and tree assembly. Evaluation goes 98 ms at 24 projects to 143 ms at
+389, and 28× the source bytes costs 9%, so it is a fixed cost per invocation
+rather than per project or per byte.
 
 **Content-addressed derivations are blocked here.** `__contentAddressed` is
 refused at evaluation even with `--extra-experimental-features ca-derivations`
