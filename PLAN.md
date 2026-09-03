@@ -29,6 +29,10 @@ grep -rn '"paths"' tsconfig*.json */*/tsconfig.json
 #   want: no output (grep exits 1, which means "found nothing")
 ```
 
+Note that the resolution check needs `pnpm install` to have run: with no
+`node_modules` nothing resolves, so the control case cannot pass and the check
+tells you nothing.
+
 If an undeclared import fails to resolve and no path mapping crosses a project
 boundary, the manifests are the graph and you need no Nx at all. If either fails, Nx's
 analysis is load-bearing: generate a table with `scripts/nx-to-nix.mjs` and
@@ -37,14 +41,41 @@ drop it at `nix/projects.json`, which `nix/graph.nix` picks up automatically.
 Also worth knowing before you start:
 
 ```bash
-nix config show post-build-hook        # if set, it charges ~2 s per derivation
+nix config show post-build-hook        # if set, it charges ~1.8 s per derivation
 nx show project <some-project> --json | jq '.targets | keys'
+```
+
+And confirm the lockfile is current, because everything downstream is derived
+from it:
+
+```bash
+pnpm install --frozen-lockfile   # must succeed; if it does not, the lockfile
+                                 # disagrees with the manifests and the Nix
+                                 # install will fail the same way
 ```
 
 ## Phase 1 — get one package's tests building
 
 Do not start with the graph. Start with a single package, hand-written, and get
 `nix build .#test-<pkg>` green. Everything else is generalisation.
+
+Everything below was rebuilt from this section alone against a fresh
+ten-project workspace with no Nix in it, which is how the gaps that used to be
+here were found. What follows is what you actually need.
+
+**Project discovery, before any of it.** Nix has no YAML parser, so it cannot
+read `pnpm-workspace.yaml`. Restate the globs in Nix and `builtins.readDir`
+them:
+
+```nix
+dirsIn = parent: lib.attrNames (lib.filterAttrs (_: t: t == "directory")
+  (builtins.readDir (repoRoot + "/${parent}")));
+projectRoots = map (n: "packages/${n}") (dirsIn "packages")
+            ++ map (n: "apps/${n}") (dirsIn "apps");
+```
+
+That restatement is the one thing taken on trust, which is why Phase 3 has a
+guard comparing it against pnpm's own answer.
 
 The pieces, in the order they bite:
 
@@ -55,19 +86,42 @@ The pieces, in the order they bite:
    fields. A build step doing the same stripping does not work: it still takes
    the full manifests as its own input. This one trick took a manifest edit
    from invalidating every test to invalidating one.
-2. **The install.** One derivation, output = the manifest skeleton *plus*
-   `node_modules`. pnpm's `node_modules` links back into the workspace package
-   directories, so the two are not separable.
-3. **The build derivation.** `tsc -p tsconfig.json`, output `$out/package.json`
+
+   `fetchDeps` is a fixed-output derivation, so it needs a hash you cannot know
+   in advance. Set `hash = lib.fakeHash;`, build, and copy the `got:` value out
+   of the mismatch error. Expect to redo this whenever the lockfile changes.
+2. **The install.** One derivation with `pnpm` and `pnpm.configHook` in
+   `nativeBuildInputs` — the hook is what actually runs the offline install —
+   and output = the manifest skeleton *plus* `node_modules`. pnpm's
+   `node_modules` links back into the workspace package directories, so the two
+   are not separable; output only `node_modules` and stdenv's
+   `noBrokenSymlinks` check will reject it.
+3. **The working tree each derivation builds inside.** This is the piece with
+   no obvious shape, and getting it wrong is what makes everything else look
+   impossible. A derivation's source is the workspace *layout*, and around it
+   you need:
+
+   ```sh
+   ln -s ${nodeModules}/node_modules ./node_modules   # at the workspace root
+   # and, per project, its dependencies as store paths under their real names
+   mkdir -p "$(dirname ${project.root}/node_modules/${dep.name})"
+   ln -sfn ${builds.${dep}} ${project.root}/node_modules/${dep.name}
+   ```
+
+   Link dependencies under their **real package name**, scope included, so
+   nothing assumes a particular npm scope. `tsc` and `vitest` then come from
+   `$PWD/node_modules/.bin` before you `cd` into the project.
+4. **The build derivation.** `tsc -p tsconfig.json`, output `$out/package.json`
    + `$out/dist`. Then the part everyone gets wrong: **give the output its own
    `node_modules`** with symlinks to its dependencies' store paths. Node
    resolves a bare specifier by walking up from the importing file, and nothing
    walks up from a store path. Also delete positional artifacts — `.d.ts.map`,
    source maps — because nothing downstream reads them and they are the only
    reason `tsc` output changes under a formatting edit.
-4. **The test derivation.** `vitest run`, with `set -o pipefail` if you pipe
+5. **The test derivation.** `vitest run`, with `set -o pipefail` if you pipe
    through `tee`, or a failing test yields a *successful* derivation. It does
-   **not** need the package's own build: the tests import `src` directly.
+   **not** need the package's own build: the tests import `src` directly. Its
+   dependency links include the **dev** dependencies, which the build's do not.
 
 ## Phase 2 — the filesets, which is where the granularity comes from
 
