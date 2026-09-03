@@ -1,0 +1,1423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nix Without Nx</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap">
+
+<style>
+  :root {
+    --ink:        #0e1519;
+    --ink-2:      #3c4a52;
+    --ink-3:      #64757e;
+    --surface:    #ffffff;
+    --surface-2:  #f3f7f8;
+    --surface-3:  #e8eff1;
+    --border:     #dae3e7;
+    --border-2:   #c3d0d6;
+
+    --teal:       #0b8f9c;
+    --clay:       #b0552f;
+    --violet:     #6a5aa8;
+    --amber:      #8a5a00;
+    --amber-bg:   #fdf6e6;
+    --fail:       #9d2b20;
+    --good:       #1c6b45;
+
+    --grid:       #e4ebee;
+
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+    --measure: 68ch;
+    --page: 1180px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink:        #e7eef1;
+      --ink-2:      #a9bac2;
+      --ink-3:      #7e929b;
+      --surface:    #0c1216;
+      --surface-2:  #141d22;
+      --surface-3:  #1c272d;
+      --border:     #243138;
+      --border-2:   #33444d;
+
+      --teal:       #2aa5b2;
+      --clay:       #c4713f;
+      --violet:     #7d6cbd;
+      --amber:      #dda43a;
+      --amber-bg:   #24200f;
+      --fail:       #ef8a7d;
+      --good:       #4bb583;
+
+      --grid:       #1e2a31;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ink:        #e7eef1;
+    --ink-2:      #a9bac2;
+    --ink-3:      #7e929b;
+    --surface:    #0c1216;
+    --surface-2:  #141d22;
+    --surface-3:  #1c272d;
+    --border:     #243138;
+    --border-2:   #33444d;
+
+    --teal:       #2aa5b2;
+    --clay:       #c4713f;
+    --violet:     #7d6cbd;
+    --amber:      #dda43a;
+    --amber-bg:   #24200f;
+    --fail:       #ef8a7d;
+    --good:       #4bb583;
+
+    --grid:       #1e2a31;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: var(--page);
+    margin: 0 auto;
+    padding: 0 28px 120px;
+  }
+
+  /* ---------- masthead ---------- */
+
+  header.masthead {
+    border-bottom: 2px solid var(--ink);
+    padding: 56px 0 22px;
+    margin-bottom: 44px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+  }
+  h1 {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: clamp(2.3rem, 5.6vw, 3.5rem);
+    line-height: 1.03;
+    letter-spacing: -0.022em;
+    margin: 0 0 18px;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-size: 1.16rem;
+    line-height: 1.55;
+    color: var(--ink-2);
+    max-width: 60ch;
+    margin: 0;
+  }
+  .standfirst strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- structure ---------- */
+
+  section { margin: 0 0 68px; }
+
+  h2 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 1.62rem;
+    letter-spacing: -0.014em;
+    line-height: 1.2;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  h2 .h2num {
+    font-family: var(--mono);
+    font-size: 0.72em;
+    font-weight: 500;
+    color: var(--teal);
+    margin-right: 0.6em;
+  }
+  h3 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 1.09rem;
+    letter-spacing: -0.006em;
+    margin: 34px 0 8px;
+    text-wrap: balance;
+  }
+  .sectionrule {
+    height: 1px;
+    background: var(--border);
+    margin: 0 0 26px;
+  }
+  p { margin: 0 0 15px; max-width: var(--measure); }
+  p.wide { max-width: none; }
+  ul, ol { max-width: var(--measure); margin: 0 0 15px; padding-left: 1.35em; }
+  li { margin-bottom: 8px; }
+  strong { font-weight: 600; }
+  em { font-style: italic; }
+  code {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.08em 0.34em;
+  }
+  a { color: var(--teal); text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--teal);
+    outline-offset: 2px;
+  }
+
+  /* ---------- verdict ---------- */
+
+  .verdict {
+    border: 2px solid var(--ink);
+    background: var(--surface-2);
+    padding: 26px 28px 22px;
+    margin: 0 0 40px;
+  }
+  .verdict .vlabel {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin: 0 0 10px;
+  }
+  .verdict .vmain {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: clamp(1.35rem, 3vw, 1.85rem);
+    line-height: 1.22;
+    letter-spacing: -0.015em;
+    margin: 0 0 14px;
+    max-width: 42ch;
+    text-wrap: balance;
+  }
+  .verdict p { margin-bottom: 0; max-width: 64ch; color: var(--ink-2); }
+
+  /* ---------- criteria table ---------- */
+
+  .tablewrap { overflow-x: auto; margin: 0 0 12px; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 14.5px;
+    min-width: 560px;
+  }
+  th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--ink-3);
+    border-bottom: 1px solid var(--border-2);
+    padding: 0 14px 8px 0;
+    vertical-align: bottom;
+  }
+  td {
+    padding: 11px 14px 11px 0;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); }
+  /* An inline bar plus its value must not wrap: without a floor wide enough for
+     both, the larger values drop onto a second line and double the row height. */
+  #matrix td.num, #matrix th.num { white-space: nowrap; width: 108px; padding-right: 18px; }
+  tr.diverge td { background: var(--amber-bg); }
+
+  .pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 2px;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .pill.met  { color: var(--good); }
+  .pill.open { color: var(--amber); }
+  .pill.no   { color: var(--fail); }
+
+  /* ---------- figures ---------- */
+
+  figure {
+    margin: 26px 0 8px;
+    padding: 22px 22px 16px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  figure.plain { background: transparent; }
+  figcaption {
+    font-family: var(--sans);
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    margin-top: 14px;
+    max-width: 78ch;
+  }
+  figcaption b { color: var(--ink); font-weight: 600; }
+  .figtitle {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 15px;
+    margin: 0 0 3px;
+  }
+  .figsub {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-3);
+    margin: 0 0 16px;
+  }
+  .chartrow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+  }
+  svg { display: block; overflow: visible; max-width: 100%; }
+  svg text { font-family: var(--mono); fill: var(--ink-3); font-size: 10.5px; }
+  svg text.val { fill: var(--ink); font-size: 11px; font-weight: 500; }
+  svg text.lbl { fill: var(--ink-2); font-size: 11px; }
+  /* Text sitting on top of a filled mark. A class, not a fill attribute:
+     any `svg text` CSS rule outranks a presentation attribute, which left
+     these labels rendering in the axis colour against a saturated fill. */
+  svg text.onfill { fill: #ffffff; font-size: 11.5px; font-weight: 600; }
+  svg text.onfill-sub { fill: #ffffff; fill-opacity: 0.88; font-size: 11px; font-weight: 500; }
+  svg .grid { stroke: var(--grid); stroke-width: 1; }
+  svg .axis { stroke: var(--border-2); stroke-width: 1; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-family: var(--sans);
+    font-size: 12.5px;
+    color: var(--ink-2);
+    margin: 0 0 14px;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .swatch { width: 11px; height: 11px; border-radius: 2px; flex: none; }
+
+  /* ---------- provenance ---------- */
+
+  .prov {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--ink-3);
+    border-left: 2px solid var(--border-2);
+    padding: 2px 0 2px 13px;
+    margin: 14px 0 26px;
+    max-width: 82ch;
+    overflow-x: auto;
+  }
+  .prov b { color: var(--ink-2); font-weight: 500; }
+  .prov .k {
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 10px;
+  }
+
+  /* ---------- stat tiles ---------- */
+
+  .tiles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin: 24px 0 8px;
+  }
+  .tile { background: var(--surface); padding: 16px 18px 15px; }
+  .tile .tv {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 1.55rem;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+    display: block;
+  }
+  .tile .tl {
+    font-family: var(--sans);
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--ink-2);
+    margin-top: 5px;
+    display: block;
+  }
+  .tile.t-teal .tv { color: var(--teal); }
+  .tile.t-clay .tv { color: var(--clay); }
+  .tile.t-fail .tv { color: var(--fail); }
+  .tile.t-good .tv { color: var(--good); }
+
+  /* ---------- correction blocks ---------- */
+
+  .correction {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--amber);
+    padding: 18px 20px 14px;
+    margin: 0 0 16px;
+    background: var(--surface);
+  }
+  .correction .cwas, .correction .cis {
+    font-family: var(--sans);
+    font-size: 14.5px;
+    line-height: 1.5;
+    margin: 0 0 8px;
+    max-width: 76ch;
+  }
+  .correction .ctag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    display: inline-block;
+    min-width: 74px;
+  }
+  .correction .cwas b { color: var(--fail); font-weight: 500; }
+  .correction .cis b { color: var(--good); font-weight: 500; }
+  .correction .cwhy {
+    font-family: var(--serif);
+    font-size: 15px;
+    color: var(--ink-2);
+    margin: 10px 0 0;
+    max-width: 76ch;
+  }
+
+  /* ---------- checklist ---------- */
+
+  .check {
+    border-top: 1px solid var(--border);
+    padding: 18px 0 4px;
+  }
+  .check:last-of-type { border-bottom: 1px solid var(--border); }
+  .check h4 {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 15px;
+    margin: 0 0 8px;
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+  }
+  .check h4 .cn {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--teal);
+    flex: none;
+  }
+  pre {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 0 0 10px;
+    max-width: 86ch;
+  }
+  pre .c { color: var(--ink-3); }
+  .want {
+    font-family: var(--sans);
+    font-size: 13.5px;
+    color: var(--ink-2);
+    margin: 0 0 8px;
+    max-width: 76ch;
+  }
+  .want b { color: var(--ink); font-weight: 600; }
+
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: var(--ink);
+    color: var(--surface);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.5;
+    padding: 6px 9px;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.1s;
+    z-index: 40;
+    white-space: nowrap;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tooltip { transition: none; }
+  }
+
+  footer.foot {
+    border-top: 2px solid var(--ink);
+    padding-top: 22px;
+    font-family: var(--sans);
+    font-size: 13.5px;
+    color: var(--ink-2);
+    max-width: 76ch;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<header class="masthead">
+  <p class="eyebrow">
+    <span>Nix · Nx · pnpm · Vitest</span>
+    <span>19 packages · 27 test files · 129 assertions</span>
+    <span>59 checks green</span>
+  </p>
+  <h1>Nix Without Nx</h1>
+  <p class="standfirst">
+    An experiment in packaging Vitest tests as granular Nix derivations, to stop rerunning
+    every test when any file changes. It set out to import Nx's dependency analysis into Nix.
+    <strong>It found there was nothing to import.</strong>
+  </p>
+</header>
+
+<div class="verdict">
+  <p class="vlabel">Verdict</p>
+  <p class="vmain">For a pnpm workspace with isolated linking, Nix needs nothing from Nx.</p>
+  <p>
+    Nx knows dependencies at exactly one level — project to project — and derives them from the
+    package manifests. Nix can read those manifests during evaluation and produces a
+    byte-identical set of derivations. One <code>tsc</code> derivation and one Vitest derivation
+    per package is the granularity frontier. Everything below is the evidence, including the
+    four conclusions that were wrong before they were right.
+  </p>
+</div>
+
+<section>
+  <h2><span class="h2num">01</span>The three criteria</h2>
+  <div class="sectionrule"></div>
+  <p>
+    The original request named three properties the derivation granularity had to have. Each is
+    now measured rather than asserted.
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:1%">Criterion</th>
+          <th>Result</th>
+          <th style="width:1%">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Avoid IFD if possible</strong></td>
+          <td>Avoided, and free. The graph is derived in the evaluator from manifests, so no
+            derivation is imported. All 59 flake checks evaluate with
+            <code>allow-import-from-derivation false</code>.</td>
+          <td><span class="pill met">met</span></td>
+        </tr>
+        <tr>
+          <td><strong>Evaluate quickly</strong></td>
+          <td>143 ms at 389 projects, with every derivation forced. Sixteen times the projects
+            costs 1.5× the evaluation; 28× the source costs 9%.</td>
+          <td><span class="pill met">met</span></td>
+        </tr>
+        <tr>
+          <td><strong>Maximise rebuild granularity</strong></td>
+          <td>Per package is the frontier. Splitting further improves invalidation from 14/19 to
+            22/27 — proportionally worse — and adds a way to silently skip tests.</td>
+          <td><span class="pill met">met</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="prov">
+    <span class="k">verify</span><br>
+    <b>nix eval --option allow-import-from-derivation false --json .#checks.x86_64-linux \<br>
+    &nbsp;&nbsp;--apply 'set: builtins.length (builtins.attrValues (builtins.mapAttrs (n: v: v.drvPath) set))'</b><br>
+    → <b>59</b>
+  </p>
+</section>
+
+<section>
+  <h2><span class="h2num">02</span>Nx knows dependencies at one level only</h2>
+  <div class="sectionrule"></div>
+  <p>
+    This is the finding the verdict rests on. Nx's file map has a per-file <code>deps</code>
+    field — the data model <em>supports</em> sub-project dependency edges, which is what a
+    granular scheme would want. It is empty.
+  </p>
+
+  <div class="tiles">
+    <div class="tile"><span class="tv">126</span><span class="tl">files Nx tracks</span></div>
+    <div class="tile"><span class="tv">88</span><span class="tl">TypeScript files tracked</span></div>
+    <div class="tile t-teal"><span class="tv">16</span><span class="tl">files carrying dependency edges</span></div>
+    <div class="tile t-teal"><span class="tv">16</span><span class="tl">of those that are <code>package.json</code></span></div>
+    <div class="tile t-fail"><span class="tv">0</span><span class="tl">TypeScript files carrying any edge</span></div>
+  </div>
+  <p class="prov">
+    <span class="k">source</span> <b>results/nx-dependency-levels.json</b><br>
+    <span class="k">reproduce</span> <b>node scripts/nx-dependency-levels.mjs</b>
+  </p>
+
+  <p>
+    Every workspace edge is attributed to the project's manifest, so Nx is reading the same file
+    Nix can read. Two probes confirm it from the other side: for an <em>undeclared</em> import of
+    a workspace package, Nx reports <strong>no edge</strong>; for a cross-package
+    <code>tsconfig</code> path alias, Nx reports <strong>no edge</strong>. Both fail the build
+    loudly instead, because pnpm's isolated <code>node_modules</code> never linked the package.
+  </p>
+  <p>
+    So the graph derived from manifests in the evaluator is not an approximation of Nx's answer.
+    It is the same answer, and the derivations prove it:
+  </p>
+
+  <div class="tiles">
+    <div class="tile t-good"><span class="tv">38 / 38</span><span class="tl">derivation paths byte-identical, generated table vs. manifests</span></div>
+    <div class="tile"><span class="tv">200–207 ms</span><span class="tl">evaluation either way</span></div>
+    <div class="tile t-fail"><span class="tv">0</span><span class="tl">generated files now checked in</span></div>
+  </div>
+  <p class="prov">
+    <span class="k">this is why</span> <b>nix/projects.json was deleted;</b> nix/graph.nix reads the manifests.
+    A generated table remains supported as an <em>optional override</em> for a workspace where the
+    manifests stop being the graph.
+  </p>
+</section>
+
+<section>
+  <h2><span class="h2num">03</span>Evaluation does not grow with the workspace</h2>
+  <div class="sectionrule"></div>
+  <p>
+    Criterion 2 was the one that could still have sunk the approach: evaluation happens on every
+    invocation, before any build. If it scaled linearly with project count, a 400-package
+    workspace would pay about 1.6 s per <code>nix build</code>. It does not scale linearly. It
+    barely scales at all.
+  </p>
+
+  <figure>
+    <p class="figtitle">Evaluation time against project count</p>
+    <p class="figsub">every build and test derivation forced · median of three runs · nothing built, nothing installed</p>
+    <div class="chartrow">
+      <div>
+        <div id="chart-scale-total"></div>
+      </div>
+      <div>
+        <div id="chart-scale-per"></div>
+      </div>
+    </div>
+    <figcaption>
+      Total evaluation is near-flat: <b>98 ms at 24 projects, 143 ms at 389</b>. Cost per project
+      falls an order of magnitude, from 4.1 ms to 0.4 ms — the signature of a fixed cost
+      dominating. Marginal cost is about <b>0.12 ms per project</b>. Had it been linear from the
+      24-project figure, 389 projects would have cost roughly 1 588 ms.
+    </figcaption>
+    <p class="prov">
+      <span class="k">source</span> <b>results/scale.json</b> → <code>.sizes[]</code><br>
+      <span class="k">reproduce</span> <b>node scripts/measure-scale.mjs</b><br>
+      <span class="k">guarded against</span> forcing all 778 derivation paths on a never-evaluated
+      workspace took 150 ms cold against 148 ms warm, so this is not an evaluation cache.
+    </p>
+  </figure>
+
+  <h3>Nor does package size matter</h3>
+  <p>
+    Evaluation copies every project directory into the store, so a workspace of large uneven
+    packages could plausibly cost more than a uniform synthetic one. Measured at the same project
+    count, one uniform and one with packages varying from 2 to 9 modules and files from 20 to 260
+    lines:
+  </p>
+  <div class="tiles">
+    <div class="tile"><span class="tv">177 KB</span><span class="tl">uniform source → <b>121 ms</b></span></div>
+    <div class="tile"><span class="tv">5.0 MB</span><span class="tl">varied source → <b>132 ms</b></span></div>
+    <div class="tile t-teal"><span class="tv">+9%</span><span class="tl">for 28× the source</span></div>
+  </div>
+  <p class="prov">
+    <span class="k">source</span> <b>results/scale.json</b> → <code>.variation.shapes</code><br>
+    <span class="k">still untested</span> a <em>deep</em> cross-package import graph, and
+    <code>tsconfig</code> project references. The generated workspace is layered but shallow.
+  </p>
+</section>
+
+<section>
+  <h2><span class="h2num">04</span>Where a derivation's time actually goes</h2>
+  <div class="sectionrule"></div>
+  <p>
+    One leaf package's test derivation, edited uniquely so it must rebuild, measured in parts
+    rather than divided out of a total. This is the measurement that killed the plan to make
+    derivations cheaper by sharing a workspace skeleton between them.
+  </p>
+
+  <figure>
+    <p class="figtitle">1 177 ms for one leaf test derivation</p>
+    <p class="figsub">evaluation measured with --dry-run · Vitest measured in the live workspace · remainder is stdenv and tree assembly</p>
+    <div class="legend" id="legend-breakdown"></div>
+    <div id="chart-breakdown"></div>
+    <figcaption>
+      <b>Evaluation is 69% of it</b> — and evaluation is a fixed cost per <code>nix build</code>
+      invocation, not per unit. Vitest's own 292 ms is irreducible. The remaining
+      <b>69 ms, under 6%</b>, is the only part a shared skeleton could ever have recovered, in
+      exchange for a shared derivation holding the package sources that would become an input to
+      every test — destroying the property the whole design exists to protect.
+    </figcaption>
+    <p class="prov">
+      <span class="k">source</span> <b>results/benchmark.json</b> →
+      <code>.nix.singleLeafDerivationMs</code>, <code>.leafEvaluationOnlyMs</code>,
+      <code>.vitestAloneMs</code><br>
+      <span class="k">reproduce</span> <b>node scripts/benchmark.mjs</b>
+    </p>
+  </figure>
+
+  <h3>Amortise that fixed cost and the comparison inverts</h3>
+  <p>
+    Because evaluation is charged per invocation, building one unit looks expensive and building
+    nineteen does not. Both figures are true; they answer different questions.
+  </p>
+
+  <figure>
+    <p class="figtitle">Nix against Nx, five ways</p>
+    <p class="figsub">--max-jobs 4 · post-build hook disabled · Nx using its own cache</p>
+    <div class="legend" id="legend-vs"></div>
+    <div id="chart-vs"></div>
+    <figcaption>
+      Nix wins on everything except building a <b>single</b> unit, where one invocation's 816 ms
+      of evaluation lands on one derivation. Per unit of work with evaluation amortised across a
+      19-unit invocation, Nix costs <b>156 ms</b> against Nx's <b>341 ms</b> — computed as
+      (3 784 − 816) ÷ 19 and 6 487 ÷ 19.
+    </figcaption>
+    <p class="prov">
+      <span class="k">source</span> <b>results/benchmark.json</b><br>
+      <span class="k">reproduce</span> <b>node scripts/benchmark.mjs</b><br>
+      <span class="k">read this carefully</span> the "single unit" row is the number an
+      editor-driven loop hits, so it matters — but it is a property of invoking Nix, not of the
+      granularity, and it does not grow with the workspace.
+    </p>
+  </figure>
+</section>
+
+<section>
+  <h2><span class="h2num">05</span>What each kind of change invalidates</h2>
+  <div class="sectionrule"></div>
+  <p>
+    Thirteen classes of change, applied one at a time to a clean tree and reverted. For each,
+    three counts out of 19: the projects <code>nx show projects --affected</code> reports, the
+    Nx <em>task hashes</em> that changed, and the Nix derivation paths that changed.
+  </p>
+  <p>
+    Comparing Nix against Nx's <em>affectedness</em> would flatter Nix — affectedness is
+    project-level and ignores target inputs. The task hash is the fair counterpart to a
+    derivation path: both decide whether the work is reused.
+  </p>
+
+  <figure class="plain">
+    <div class="tablewrap">
+      <table id="matrix">
+        <thead>
+          <tr>
+            <th>Change</th>
+            <th class="num">Nx affected</th>
+            <th class="num">Nx rehashed</th>
+            <th class="num">Nix invalidated</th>
+            <th style="width:34%">Reading</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <figcaption>
+      Eleven of thirteen agree. <b>Both disagreements favour Nix</b>, for different reasons —
+      highlighted rows. The README row is the clean demonstration of why affectedness is the wrong
+      column to compare: Nx reports the project affected, no task hash changes, and the task is
+      served from cache.
+    </figcaption>
+    <p class="prov">
+      <span class="k">source</span> <b>results/change-matrix.json</b><br>
+      <span class="k">reproduce</span> <b>node scripts/change-matrix.mjs</b>
+      &nbsp;<span class="c">(mutates tracked files; needs a clean tree; restores in a finally block)</span>
+    </p>
+  </figure>
+
+  <h3>Why the two disagreements happen</h3>
+  <p>
+    <strong>A test-only dependency.</strong> <code>test-utils</code> is a dev dependency of three
+    packages. Nx's project graph reports <code>dependencies</code> and
+    <code>devDependencies</code> both as <code>type: "static"</code>, so <code>^sources</code>
+    propagates it transitively: 8 test tasks rehash. Nix invalidates 4, because
+    <code>test-utils</code> never enters those packages' <code>dist</code> — the build
+    derivation's closure literally does not contain it. Recovering the split costs one lookup per
+    project in the manifests.
+  </p>
+  <p>
+    <strong><code>pnpm-workspace.yaml</code>.</strong> It decides what counts as a workspace
+    package and carries install-affecting settings. It is in no Nx named input, so a change to it
+    rehashes nothing and would rerun nothing. Nix cannot miss it, because the install derivation
+    reads it and every test depends on the install.
+  </p>
+  <p>
+    The shape is the same in both: in Nx an input exists because somebody declared it, and a
+    missing declaration fails silently in the unsafe direction.
+  </p>
+</section>
+
+<section>
+  <h2><span class="h2num">06</span>Granularity: where to stop</h2>
+  <div class="sectionrule"></div>
+  <p>
+    Three granularities were built and measured: one derivation per package; one per test file
+    with the whole project as input; one per test file with only that file as input.
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Granularity</th>
+          <th class="num">Nix nodes</th>
+          <th class="num">Evaluation</th>
+          <th class="num">Invalidated by one test-file edit</th>
+          <th class="num">By a shared source edit</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Per package</td>
+          <td class="num">19</td><td class="num">476 ms</td>
+          <td class="num">1 / 19</td><td class="num">14 / 19</td>
+        </tr>
+        <tr>
+          <td>Per test file, whole project as input</td>
+          <td class="num">27</td><td class="num">467 ms</td>
+          <td class="num">2 / 27</td><td class="num">22 / 27</td>
+        </tr>
+        <tr>
+          <td>Per test file, single file as input</td>
+          <td class="num">27</td><td class="num">450 ms</td>
+          <td class="num">1 / 27</td><td class="num">22 / 27</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="prov">
+    <span class="k">source</span> <b>results/granularity.json</b><br>
+    <span class="k">reproduce</span> <b>node scripts/granularity.mjs</b>
+  </p>
+  <p>
+    For a source change the finer granularity is proportionally <em>worse</em> — 22/27 against
+    14/19 — because splitting a package into several nodes splits nodes that were going to be
+    invalidated anyway. Only an edit confined to one test file benefits.
+  </p>
+  <p>
+    The cost side cannot be pinned down: two runs of the same measurement gave +18% and +2%, so
+    "small" is all the data supports. The case against per-test-file granularity does not need it.
+    It rests on the invalidation gain being negligible and on the hazard the split introduces —
+    a test file missing from the enumeration gets no derivation, and every derivation that does
+    exist still passes. Demonstrated by removing one: the workspace stayed green and four
+    assertions never ran.
+  </p>
+  <p>
+    Where per-file granularity <em>does</em> pay is parallelism, and Nx shows it: splitting 19
+    units into 27 took Nx from 6 487 ms to 3 420 ms, because slow files stop queueing behind a
+    package-level task. That is the one thing in this experiment worth taking from Nx — and Nx
+    will compute the split for free while refusing to <em>run</em> the group target without Nx
+    Cloud. The individual per-file targets run locally.
+  </p>
+</section>
+
+<section>
+  <h2><span class="h2num">07</span>Architecture D, measured and rejected</h2>
+  <div class="sectionrule"></div>
+  <p>
+    One candidate architecture was to generate Nix derivations from Nx's <em>task</em> graph
+    rather than its project graph. Earlier drafts argued against it from the shape of the data and
+    admitted it had never been built. Rather than build a parallel implementation, the claim is
+    directly testable: compare the unit-and-edge set each graph would generate.
+  </p>
+  <div class="tiles">
+    <div class="tile"><span class="tv">38</span><span class="tl">units from the project graph</span></div>
+    <div class="tile t-fail"><span class="tv">33</span><span class="tl">units from the task graph</span></div>
+    <div class="tile t-fail"><span class="tv">5</span><span class="tl">missing units</span></div>
+    <div class="tile t-fail"><span class="tv">3</span><span class="tl">spurious edges</span></div>
+    <div class="tile"><span class="tv">false</span><span class="tl">isomorphic</span></div>
+  </div>
+  <p class="prov">
+    <span class="k">source</span> <b>results/task-graph-comparison.json</b><br>
+    <span class="k">reproduce</span> <b>node scripts/compare-task-graph.mjs</b>
+  </p>
+  <p>
+    The five missing units are <code>build-chain-a</code>, <code>build-cli</code>,
+    <code>build-orphan</code>, <code>build-report</code>, <code>build-web</code> — exactly the
+    leaf projects nothing depends on, so <code>^build</code> never pulls their build task in.
+    Since <strong>Vitest does not typecheck</strong>, deriving from the task graph would leave a
+    type error in any leaf package invisible to every check. The three spurious edges are the
+    dev-dependency imprecision again, propagated into build ordering.
+  </p>
+  <p>
+    So the architecture that looked merely redundant is actively unsafe. That was the surprise of
+    the exercise.
+  </p>
+</section>
+
+<section>
+  <h2><span class="h2num">08</span>Four conclusions that were wrong first</h2>
+  <div class="sectionrule"></div>
+  <p>
+    Included because the page's job is to let the work be checked, and because every one of these
+    was caught by measurement disagreeing with itself rather than by review. If you want to find
+    a fifth error, this is the shape it will have.
+  </p>
+
+  <div class="correction">
+    <p class="cwas"><span class="ctag">was</span><b>"Nix does not buy speed — 7× slower on a one-file change."</b></p>
+    <p class="cis"><span class="ctag">is</span><b>Nix is faster on every aggregate case; ~1.4× slower on a single unit.</b></p>
+    <p class="cwhy">
+      This machine runs a Nix post-build hook uploading every output to a binary cache. On one
+      leaf unit that is 3 018 ms with the hook against 1 177 ms without — roughly two thirds of
+      what had been reported as "the fixed cost per Nix derivation" was cache upload. It is
+      charged <em>per derivation</em>, so it also interacts directly with the granularity choice.
+      Every Nix figure on this page passes <code>--option post-build-hook ""</code>.
+    </p>
+  </div>
+
+  <div class="correction">
+    <p class="cwas"><span class="ctag">was</span><b>"Nx affected 0.68 s against Nix 45.9 s — 70× slower."</b></p>
+    <p class="cis"><span class="ctag">is</span><b>6 377 ms against 3 758 ms. Nix is 1.7× <em>faster</em>.</b></p>
+    <p class="cwhy">
+      The harness appended identical text every run, so it kept reproducing an edit whose
+      derivations an earlier run had already built. Nx served a cache hit; the same bug ran in
+      Nix's favour elsewhere, reporting 1.3 s for work that recompiles fourteen packages. Each
+      harness mutation is now unique per run.
+    </p>
+  </div>
+
+  <div class="correction">
+    <p class="cwas"><span class="ctag">was</span><b>A cold-build column: 23.4 s per-package, 32.9 s per-test-file.</b></p>
+    <p class="cis"><span class="ctag">is</span><b>Withdrawn. The same measurement gave 23 s and 80 s on consecutive runs.</b></p>
+    <p class="cwhy">
+      It deleted only the test outputs and left every <code>tsc</code> output in the store, so
+      "cold" meant "everything except the compilation" and drifted with whatever an earlier run
+      had left behind. Defining it properly required deleting build outputs too — and
+      <code>nix store delete</code> scans every GC root then walks
+      <code>/nix/store/.links</code>, which on a store deduplicating 200 GiB, called once per
+      path, took the machine down. The benchmark no longer touches the store; it forces work by
+      changing an input instead.
+    </p>
+  </div>
+
+  <div class="correction">
+    <p class="cwas"><span class="ctag">was</span><b>"Which package an import resolves to is the whole reason the bridge is worth anything."</b></p>
+    <p class="cis"><span class="ctag">is</span><b>Nx does not resolve it either. It reads the manifest.</b></p>
+    <p class="cwhy">
+      A day went into designing a bridge to import Nx's dependency analysis. One
+      <code>jq</code> query over Nx's file map would have shown the per-file <code>deps</code>
+      field empty for all 88 TypeScript files. The lesson generalises: before building a bridge to
+      another tool's analysis, check that the analysis exists. A field present in the schema is
+      not a field with anything in it.
+    </p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="h2num">09</span>Preconditions for your repository</h2>
+  <div class="sectionrule"></div>
+  <p>
+    The verdict is conditional. These are the conditions, and every command below has been run so
+    that its real output is known — a check whose output you cannot interpret is worse than no
+    check. The first two decide the architecture.
+  </p>
+
+  <div class="check">
+    <h4><span class="cn">01</span>An undeclared import must not resolve</h4>
+    <pre><span class="c"># pick a package, and a workspace package it does NOT depend on</span>
+cd packages/&lt;a-package&gt;
+node -e "require.resolve('@scope/&lt;something-it-does-not-declare&gt;')"</pre>
+    <p class="want"><b>Want:</b> failure, <code>MODULE_NOT_FOUND</code>, exit 1. Repeat for a
+      package the manifest <em>does</em> declare — it must print a path, or the check is not
+      discriminating. It needs <code>pnpm install</code> to have run: with no
+      <code>node_modules</code> nothing resolves and the control cannot pass.</p>
+    <p class="want">Do <em>not</em> use <code>pnpm config get node-linker</code>: it prints
+      <code>undefined</code> in the normal passing case, so the answer looks like an error and
+      says nothing about the tree that got installed.</p>
+    <p class="want"><b>If it fails:</b> phantom imports resolve, the manifests under-report, and
+      Nix would build a graph missing real edges. Use the generated-table override.</p>
+  </div>
+
+  <div class="check">
+    <h4><span class="cn">02</span>No path mapping crosses a project boundary</h4>
+    <pre>grep -rn '"paths"' tsconfig*.json */*/tsconfig.json</pre>
+    <p class="want"><b>Want:</b> no output. <code>grep</code> exits 1, which means "found
+      nothing", not "failed". If there is output, check whether any mapping's target lies outside
+      the project declaring it; a mapping to <code>./src/*</code> is harmless.</p>
+    <p class="want"><b>If it fails:</b> the manifests are not the graph — and confirm Nx actually
+      reports those edges before relying on it. Here it reported none.</p>
+  </div>
+
+  <div class="check">
+    <h4><span class="cn">03</span>Tests import source, not the built output</h4>
+    <pre>for d in packages/*/ apps/*/; do
+  name=$(jq -r .name "$d/package.json")
+  grep -l "from '$name'" "$d"/tests/*.ts 2>/dev/null
+done</pre>
+    <p class="want"><b>Want:</b> no output. Anything listed is a test importing its own package by
+      name, which resolves through <code>node_modules</code> to the built output.</p>
+    <p class="want"><b>If it fails:</b> add each package's own build to its test derivation's
+      inputs. One extra edge per package, no loss of correctness.</p>
+  </div>
+
+  <div class="check">
+    <h4><span class="cn">04</span>One real build target and one real test target per project</h4>
+    <pre>nx show project &lt;a-project&gt; --json | jq -c '[.targets | keys[]]'</pre>
+    <p class="want"><b>Want:</b> one thing to build and one way to test. Expect more entries than
+      that — this workspace prints six, because the atomizer derives per-file targets and Nx adds
+      its own <code>nx-release-publish</code>.</p>
+    <p class="want"><b>If it fails:</b> several real targets per project is the one case where the
+      task graph might express something the project graph cannot. Unexplored, not rejected.</p>
+  </div>
+
+  <div class="check">
+    <h4><span class="cn">05</span><code>tsc</code> is the builder, and no uncommitted generated sources</h4>
+    <pre>jq -r -s 'map(.scripts.build) | group_by(.) | map({script: .[0], count: length})' \
+  packages/*/package.json apps/*/package.json</pre>
+    <p class="want"><b>Want:</b> a single group, and that group a plain compile. Here:
+      <code>[{ "script": "tsc -p tsconfig.json", "count": 19 }]</code>. Several groups is fine as
+      long as you read them; a <code>&amp;&amp;</code> chain or a codegen prefix writing into
+      <code>src/</code> is the failing shape.</p>
+    <p class="want"><b>If sources are generated:</b> commit them or generate them inside the
+      derivation. Nix's filesets come from the git tree and so does Nx's file index, so neither
+      sees an uncommitted generated file — it fails loudly rather than silently, but it does fail.</p>
+  </div>
+
+  <div class="check">
+    <h4><span class="cn">06</span>Whether a post-build hook uploads to a cache</h4>
+    <pre>nix config show post-build-hook</pre>
+    <p class="want"><b>Want:</b> empty. Here it prints a store path to an upload script, which
+      cost about 1 841 ms per derivation and swamped every figure in this experiment until it was
+      disabled.</p>
+    <p class="want"><b>If it is set:</b> count derivations before choosing a finer granularity.
+      This is not a correctness precondition — it is the largest cost found, and it scales with
+      exactly the granularity you are trying to buy.</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="h2num">10</span>Three guards, because an inferred graph goes stale silently</h2>
+  <div class="sectionrule"></div>
+  <p>
+    A graph Nix inferred is an inference, and a wrong inference fails in one direction: fewer
+    tests, still green. Closing that takes three checks, because the question has three parts.
+    All three are in <code>nix flake check</code>.
+  </p>
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr><th>Question</th><th>Check</th><th>Independent authority</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Is every project present?</td>
+          <td><code>nix build .#workspaceProjects</code></td>
+          <td>pnpm, via <code>pnpm list -r --depth -1 --json</code></td>
+        </tr>
+        <tr>
+          <td>Are the declared edges the ones the source imports?</td>
+          <td><code>nix build .#build-&lt;pkg&gt;</code>, all of them</td>
+          <td>pnpm-strict resolution and <code>tsc</code></td>
+        </tr>
+        <tr>
+          <td>Is every test file covered?</td>
+          <td><code>nix build .#guard-&lt;pkg&gt;</code></td>
+          <td>Vitest, via <code>vitest list --filesOnly --json</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Each was proven by breaking it deliberately. Dropping <code>apps</code> from the workspace
+    globs silently takes the test derivations from 19 to 16; the guard exits 1 and names
+    <code>apps/cli</code>, <code>apps/report</code>, <code>apps/web</code>. Removing a test file
+    from the enumeration leaves the workspace green with four assertions unrun; the guard exits 1
+    and names the file.
+  </p>
+  <p>
+    The second row exists for a reason worth stating separately. A package's test derivation
+    deliberately does not depend on its own build — the tests import <code>src</code> directly,
+    which is a real precision win. But <strong>Vitest does not typecheck</strong>: Vite strips
+    types without checking them. Combine the two and a type error in a leaf package with no
+    dependants was invisible to every check in the flake. Confirmed by introducing one —
+    <code>test-orphan</code> passed, <code>build-orphan</code> reported
+    <code>TS2322</code>.
+  </p>
+</section>
+
+<section>
+  <h2><span class="h2num">11</span>What is still open</h2>
+  <div class="sectionrule"></div>
+  <ul>
+    <li><strong>Content-addressed derivations.</strong> Blocked, not declined: this machine's Nix
+      daemon does not have <code>ca-derivations</code> enabled, and it is refused at evaluation
+      even with the flag accepted by the client and <code>Trusted: 1</code>. The prerequisite is
+      done — <code>.d.ts.map</code> files are deleted from build outputs, because they were the
+      only reason <code>tsc</code> output changed under a formatting-only edit, and nothing
+      downstream reads them.</li>
+    <li><strong>Deep import graphs and <code>tsconfig</code> project references at scale.</strong>
+      The scaling workspace is layered but shallow, and package size has been tested but import
+      depth has not.</li>
+    <li><strong>Architecture D for multi-target projects.</strong> Measured and rejected for one
+      build and one test target per project. Whether a task graph with several real targets
+      expresses something the project graph cannot is untested.</li>
+    <li><strong>The single-unit gap.</strong> 1 177 ms against Nx's 845 ms, of which 816 ms is
+      evaluation. Amortised across an invocation Nix is ahead, so this only bites a loop that
+      builds one package at a time. Whether Nix can be invoked once and told to watch is
+      unexplored.</li>
+    <li><strong>Your repository.</strong> Everything here is a 19-project hand-written workspace
+      and a synthetic 400-project one. Section 09 is what to run on the real thing.</li>
+  </ul>
+</section>
+
+<footer class="foot">
+  <p>
+    Every figure on this page comes from a JSON file committed in <code>results/</code>, named
+    beside it, regenerated by the script named beside it. The repository holds
+    <code>FINDINGS.md</code> (the evidence and the measurement lessons), <code>PLAN.md</code>
+    (what to do on the real repository, rebuilt from scratch against a fresh ten-project workspace
+    to find its gaps), and <code>HANDOFF.md</code>.
+  </p>
+  <p>
+    <code>nix flake check</code> passes with 59 checks: 19 Vitest derivations, 19 <code>tsc</code>
+    derivations, 19 test-file enumeration guards, the workspace-projects guard, and the
+    formatters. CI is green on every commit.
+  </p>
+</footer>
+
+</div>
+
+<div class="tooltip" id="tip"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var C = {
+    teal:   'var(--teal)',
+    clay:   'var(--clay)',
+    violet: 'var(--violet)'
+  };
+
+  var tip = document.getElementById('tip');
+  function showTip(evt, html) {
+    tip.innerHTML = html;
+    tip.style.opacity = '1';
+    moveTip(evt);
+  }
+  function moveTip(evt) {
+    var pad = 14;
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = evt.clientX + pad, y = evt.clientY - h - 8;
+    if (x + w > window.innerWidth - 8) x = evt.clientX - w - pad;
+    if (y < 8) y = evt.clientY + pad;
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  }
+  function hideTip() { tip.style.opacity = '0'; }
+
+  function el(name, attrs, kids) {
+    var n = document.createElementNS('http://www.w3.org/2000/svg', name);
+    for (var k in attrs) if (attrs[k] !== null && attrs[k] !== undefined) n.setAttribute(k, attrs[k]);
+    (kids || []).forEach(function (c) { n.appendChild(c); });
+    return n;
+  }
+  function txt(name, attrs, s) {
+    var n = el(name, attrs, []);
+    n.textContent = s;
+    return n;
+  }
+
+  /* ------------------------------------------------------------------
+     DATA — every array below is the committed measurement, so the
+     numbers are readable in this page's source as well as its charts.
+     ------------------------------------------------------------------ */
+
+  // results/scale.json → .sizes[]
+  var SCALE = [
+    { projects: 24,  derivations: 48,  ms: 98,  perProject: 4.1 },
+    { projects: 48,  derivations: 96,  ms: 100, perProject: 2.1 },
+    { projects: 97,  derivations: 194, ms: 103, perProject: 1.1 },
+    { projects: 195, derivations: 390, ms: 121, perProject: 0.6 },
+    { projects: 389, derivations: 778, ms: 143, perProject: 0.4 }
+  ];
+
+  // results/benchmark.json → .nix.{singleLeafDerivationMs, leafEvaluationOnlyMs, vitestAloneMs}
+  var BREAKDOWN = [
+    { label: 'Nix evaluation',            ms: 816, color: C.teal,   note: 'fixed per invocation' },
+    { label: 'Vitest',                    ms: 292, color: C.clay,   note: 'irreducible' },
+    { label: 'stdenv + tree assembly',    ms: 69,  color: C.violet, note: 'all a shared skeleton could recover' }
+  ];
+
+  // results/benchmark.json
+  var VS = [
+    { label: 'Every test, nothing to do',              nix: 75,   nx: 458  },
+    { label: 'One leaf unit, after an edit',           nix: 1177, nx: 845  },
+    { label: 'Every test, after a foundation edit',    nix: 3758, nx: 6377 },
+    { label: 'Every unit rebuilt (19 units)',          nix: 3784, nx: 6487 },
+    { label: 'Per unit of work, eval amortised',       nix: 156,  nx: 341  }
+  ];
+
+  // results/change-matrix.json → .changes[]
+  var MATRIX = [
+    ['Source of an isolated leaf',                1, 1, 1,  ''],
+    ['Source of the shared foundation',          14,14,14,  ''],
+    ['Source at the bottom of the chain',         4, 4, 4,  ''],
+    ['Source of a test-only dependency',          8, 8, 4,  'Nx propagates a dev dependency into build inputs', 1],
+    ['A test file',                               1, 1, 1,  ''],
+    ['A package manifest',                        1, 1, 1,  ''],
+    ["One package's vitest config",               1, 1, 1,  ''],
+    ['The shared vitest config',                 19,19,19,  ''],
+    ['The shared tsconfig',                      19,19,19,  ''],
+    ['The lockfile',                             19,19,19,  'Only because it was declared an Nx input; it is not by default'],
+    ['A dead field of the root manifest',         0, 0, 0,  ''],
+    ['pnpm-workspace.yaml',                       0, 0,19,  'In no Nx named input, so Nx would rerun nothing', 1],
+    ['A new README',                              1, 0, 1,  'Why affectedness is the wrong column to compare']
+  ];
+
+  /* ---------------- chart 1a: eval total ---------------- */
+  function lineChart(mount, data, yKey, opts) {
+    var W = 440, H = 220, m = { t: 16, r: 22, b: 40, l: 56 };
+    var iw = W - m.l - m.r, ih = H - m.t - m.b;
+    var xs = data.map(function (d) { return d.projects; });
+    var xMin = 0, xMax = 400;
+    var yMax = opts.yMax;
+    var X = function (v) { return m.l + (v - xMin) / (xMax - xMin) * iw; };
+    var Y = function (v) { return m.t + ih - (v / yMax) * ih; };
+
+    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img',
+      'aria-label': opts.aria });
+
+    // recessive grid + y labels
+    opts.ticks.forEach(function (t) {
+      svg.appendChild(el('line', { class: 'grid', x1: m.l, x2: m.l + iw, y1: Y(t), y2: Y(t) }));
+      svg.appendChild(txt('text', { x: m.l - 8, y: Y(t) + 3.5, 'text-anchor': 'end' }, opts.fmt(t)));
+    });
+    svg.appendChild(el('line', { class: 'axis', x1: m.l, x2: m.l + iw, y1: m.t + ih, y2: m.t + ih }));
+    [0, 100, 200, 300, 400].forEach(function (t) {
+      svg.appendChild(txt('text', { x: X(t), y: m.t + ih + 16, 'text-anchor': 'middle' }, String(t)));
+    });
+    svg.appendChild(txt('text', { x: m.l + iw / 2, y: H - 4, 'text-anchor': 'middle', class: 'lbl' }, 'projects'));
+
+    // area + line
+    var dPath = data.map(function (d, i) {
+      return (i ? 'L' : 'M') + X(d.projects) + ' ' + Y(d[yKey]);
+    }).join(' ');
+    svg.appendChild(el('path', {
+      d: dPath + ' L' + X(data[data.length - 1].projects) + ' ' + Y(0) + ' L' + X(data[0].projects) + ' ' + Y(0) + ' Z',
+      fill: opts.color, 'fill-opacity': '0.10', stroke: 'none'
+    }));
+    svg.appendChild(el('path', { d: dPath, fill: 'none', stroke: opts.color, 'stroke-width': 2,
+      'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+
+    data.forEach(function (d, i) {
+      var last = i === data.length - 1;
+      // 2px surface ring on the mark
+      svg.appendChild(el('circle', { cx: X(d.projects), cy: Y(d[yKey]), r: last ? 5.5 : 4.5,
+        fill: opts.color, stroke: 'var(--surface-2)', 'stroke-width': 2 }));
+      // hit target larger than the mark
+      var hit = el('circle', { cx: X(d.projects), cy: Y(d[yKey]), r: 16, fill: 'transparent' });
+      hit.style.cursor = 'crosshair';
+      hit.addEventListener('mouseenter', function (e) {
+        showTip(e, d.projects + ' projects · ' + d.derivations + ' derivations<br>' +
+          opts.tipLabel + ': ' + opts.fmt(d[yKey]));
+      });
+      hit.addEventListener('mousemove', moveTip);
+      hit.addEventListener('mouseleave', hideTip);
+      svg.appendChild(hit);
+    });
+
+    // direct label on the endpoint only — never a number on every point
+    var lastD = data[data.length - 1];
+    svg.appendChild(txt('text', { x: X(lastD.projects) - 6, y: Y(lastD[yKey]) - 12,
+      'text-anchor': 'end', class: 'val' }, opts.fmt(lastD[yKey])));
+
+    mount.appendChild(svg);
+  }
+
+  lineChart(document.getElementById('chart-scale-total'), SCALE, 'ms', {
+    yMax: 160, ticks: [0, 40, 80, 120, 160],
+    fmt: function (v) { return v + ' ms'; },
+    color: C.teal, tipLabel: 'evaluation',
+    aria: 'Evaluation time stays between 98 and 143 milliseconds from 24 to 389 projects.'
+  });
+
+  lineChart(document.getElementById('chart-scale-per'), SCALE, 'perProject', {
+    yMax: 4.5, ticks: [0, 1, 2, 3, 4],
+    fmt: function (v) { return (Math.round(v * 10) / 10) + ' ms'; },
+    color: C.violet, tipLabel: 'per project',
+    aria: 'Evaluation cost per project falls from 4.1 to 0.4 milliseconds as project count rises.'
+  });
+
+  /* ---------------- chart 2: stacked breakdown ---------------- */
+  (function () {
+    var mount = document.getElementById('chart-breakdown');
+    var total = BREAKDOWN.reduce(function (s, d) { return s + d.ms; }, 0);
+    var W = 900, H = 96, m = { t: 8, r: 8, b: 30, l: 8 };
+    var iw = W - m.l - m.r, bh = 40;
+    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img',
+      'aria-label': 'Of 1177 milliseconds, 816 is Nix evaluation, 292 is Vitest, and 69 is stdenv and tree assembly.' });
+
+    var x = m.l;
+    BREAKDOWN.forEach(function (d, i) {
+      var w = (d.ms / total) * iw;
+      // 2px surface gap between adjacent fills
+      var gap = i === BREAKDOWN.length - 1 ? 0 : 2;
+      var r = el('rect', { x: x, y: m.t, width: Math.max(0, w - gap), height: bh,
+        fill: d.color, rx: 2 });
+      r.style.cursor = 'pointer';
+      r.addEventListener('mouseenter', function (e) {
+        showTip(e, d.label + '<br>' + d.ms + ' ms · ' + Math.round(d.ms / total * 100) + '% · ' + d.note);
+      });
+      r.addEventListener('mousemove', moveTip);
+      r.addEventListener('mouseleave', hideTip);
+      svg.appendChild(r);
+
+      // Direct labels only where the segment can hold one. The series name
+      // comes from the legend, so the segment carries the number: repeating the
+      // name below the bar collided with the small segment's leader label.
+      if (w > 90) {
+        svg.appendChild(txt('text', { x: x + 11, y: m.t + 19, class: 'onfill' },
+          d.ms + ' ms'));
+        svg.appendChild(txt('text', { x: x + 11, y: m.t + 34, class: 'onfill-sub' },
+          Math.round(d.ms / total * 100) + '% of the derivation'));
+      }
+      x += w;
+    });
+
+    // The smallest segment is too narrow to hold a label, so it gets one below,
+    // with a leader up to the segment. Right-anchored at the plot edge, because
+    // left-anchoring from the segment runs past the viewBox.
+    var smallX = m.l + ((BREAKDOWN[0].ms + BREAKDOWN[1].ms) / total) * iw;
+    svg.appendChild(el('line', { class: 'axis', x1: smallX + 6, x2: smallX + 6,
+      y1: m.t + bh + 2, y2: m.t + bh + 11 }));
+    svg.appendChild(txt('text', { x: W - m.r, y: m.t + bh + 18, class: 'val',
+      'text-anchor': 'end' }, '69 ms · stdenv + tree assembly · 6%'));
+
+    mount.appendChild(svg);
+
+    var lg = document.getElementById('legend-breakdown');
+    BREAKDOWN.forEach(function (d) {
+      var s = document.createElement('span');
+      var sw = document.createElement('i');
+      sw.className = 'swatch';
+      sw.style.background = d.color;
+      s.appendChild(sw);
+      s.appendChild(document.createTextNode(d.label));
+      lg.appendChild(s);
+    });
+  })();
+
+  /* ---------------- chart 3: Nix vs Nx grouped bars ---------------- */
+  (function () {
+    var mount = document.getElementById('chart-vs');
+    var rows = VS.length;
+    var rowH = 54, barH = 17, W = 900, m = { t: 10, r: 76, b: 26, l: 268 };
+    var H = m.t + rows * rowH + m.b;
+    var iw = W - m.l - m.r;
+    var max = 7000;
+    var X = function (v) { return (v / max) * iw; };
+
+    var svg = el('svg', { viewBox: '0 0 ' + W + ' ' + H, role: 'img',
+      'aria-label': 'Nix is faster than Nx on four of five measures; slower only when building a single unit.' });
+
+    [0, 1750, 3500, 5250, 7000].forEach(function (t) {
+      svg.appendChild(el('line', { class: 'grid', x1: m.l + X(t), x2: m.l + X(t),
+        y1: m.t, y2: m.t + rows * rowH }));
+      svg.appendChild(txt('text', { x: m.l + X(t), y: m.t + rows * rowH + 16,
+        'text-anchor': 'middle' }, (t / 1000) + 's'));
+    });
+
+    VS.forEach(function (d, i) {
+      var y = m.t + i * rowH + 6;
+      svg.appendChild(txt('text', { x: m.l - 14, y: y + barH + 2, 'text-anchor': 'end',
+        class: 'lbl' }, d.label));
+
+      [['nix', C.teal, 'Nix'], ['nx', C.clay, 'Nx']].forEach(function (s, k) {
+        var v = d[s[0]];
+        var by = y + k * (barH + 2);
+        var w = Math.max(2, X(v));
+        var r = el('rect', { x: m.l, y: by, width: w, height: barH, fill: s[1], rx: 2 });
+        r.style.cursor = 'pointer';
+        r.addEventListener('mouseenter', function (e) {
+          showTip(e, s[2] + ' · ' + d.label + '<br>' + v.toLocaleString('en-GB') + ' ms');
+        });
+        r.addEventListener('mousemove', moveTip);
+        r.addEventListener('mouseleave', hideTip);
+        svg.appendChild(r);
+        svg.appendChild(txt('text', { x: m.l + w + 7, y: by + barH - 4, class: 'val' },
+          v.toLocaleString('en-GB') + ' ms'));
+      });
+    });
+
+    mount.appendChild(svg);
+
+    var lg = document.getElementById('legend-vs');
+    [['Nix derivations', C.teal], ['Nx tasks', C.clay]].forEach(function (d) {
+      var s = document.createElement('span');
+      var sw = document.createElement('i');
+      sw.className = 'swatch';
+      sw.style.background = d[1];
+      s.appendChild(sw);
+      s.appendChild(document.createTextNode(d[0]));
+      lg.appendChild(s);
+    });
+  })();
+
+  /* ---------------- change matrix table with inline bars ---------------- */
+  (function () {
+    var tbody = document.querySelector('#matrix tbody');
+    function cell(v, color) {
+      var td = document.createElement('td');
+      td.className = 'num';
+      var bar = document.createElement('span');
+      bar.style.cssText = 'display:inline-block;vertical-align:middle;height:8px;border-radius:2px;' +
+        'margin-right:8px;background:' + color + ';width:' + (v / 19 * 46) + 'px;';
+      bar.setAttribute('aria-hidden', 'true');
+      td.appendChild(bar);
+      td.appendChild(document.createTextNode(String(v)));
+      return td;
+    }
+    MATRIX.forEach(function (r) {
+      var tr = document.createElement('tr');
+      if (r[5]) tr.className = 'diverge';
+      var name = document.createElement('td');
+      name.textContent = r[0];
+      tr.appendChild(name);
+      tr.appendChild(cell(r[1], 'var(--border-2)'));
+      tr.appendChild(cell(r[2], C.clay));
+      tr.appendChild(cell(r[3], C.teal));
+      var note = document.createElement('td');
+      note.style.cssText = 'font-size:13px;color:var(--ink-2);';
+      note.textContent = r[4] || '';
+      tr.appendChild(note);
+      tbody.appendChild(tr);
+    });
+  })();
+})();
+</script>
+</body>
+</html>

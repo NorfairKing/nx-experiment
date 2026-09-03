@@ -4,8 +4,14 @@ Can Nix take advantage of the dependency analysis Nx has already done on a
 JavaScript monorepo, and build and test that repository at a finer granularity
 than "run everything when anything changes"?
 
-Conclusions are in [FINDINGS.md](FINDINGS.md). This file is how to reproduce
-them.
+Conclusions are in [FINDINGS.md](FINDINGS.md), or as a browsable page in
+[docs/nix-without-nx.html](docs/nix-without-nx.html). This file is how to
+reproduce them.
+
+**Applying this to a real repository?** Start with
+[HANDOFF-REAL-REPO.md](HANDOFF-REAL-REPO.md) — two commands there decide which
+of two designs you are building. [PLAN.md](PLAN.md) is the build order.
+[HANDOFF.md](HANDOFF.md) is for continuing the experiment itself.
 
 ## The workspace
 
