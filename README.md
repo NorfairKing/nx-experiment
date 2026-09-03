@@ -130,6 +130,7 @@ node scripts/input-comparison.mjs     # results/input-comparison.json
 node scripts/correctness-probes.mjs   # results/correctness-probes.json
 node scripts/measure-scale.mjs        # results/scale.json
 node scripts/nx-dependency-levels.mjs # results/nx-dependency-levels.json
+node scripts/compare-task-graph.mjs   # results/task-graph-comparison.json
 node scripts/dump-nx-hashes.mjs       # Nx task hashes, to stdout
 ```
 
@@ -155,6 +156,9 @@ node scripts/dump-nx-hashes.mjs       # Nx task hashes, to stdout
   decided the architecture holds at size.
 - **nx-dependency-levels** counts where Nx's file map actually carries
   dependency information. The answer is: only on `package.json`.
+- **compare-task-graph** checks whether deriving derivations from Nx's task
+  graph would give a different set than deriving them from the project graph.
+  It would: 5 fewer units and 3 spurious edges.
 - **correctness-probes** deliberately breaks four things — an undeclared
   import, a type error no test exercises, a cross-package `tsconfig` `paths`
   alias, an uncommitted generated source — and records which mechanism notices

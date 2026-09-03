@@ -1,0 +1,54 @@
+{
+  "note": "Nodes and edges of the units each graph would generate. Isomorphic means architecture D generates the same derivations as architecture A, so there is nothing to gain from it in this workspace.",
+  "nixUnits": 38,
+  "nxUnits": 33,
+  "onlyInNix": [
+    "build-chain-a",
+    "build-cli",
+    "build-orphan",
+    "build-report",
+    "build-web"
+  ],
+  "onlyInNx": [],
+  "edgeDifferences": [
+    {
+      "unit": "build-lexer",
+      "fromProjectGraph": [
+        "build-strings",
+        "build-tokens"
+      ],
+      "fromTaskGraph": [
+        "build-strings",
+        "build-test-utils",
+        "build-tokens"
+      ]
+    },
+    {
+      "unit": "build-parser",
+      "fromProjectGraph": [
+        "build-ast",
+        "build-lexer",
+        "build-tokens"
+      ],
+      "fromTaskGraph": [
+        "build-ast",
+        "build-lexer",
+        "build-test-utils",
+        "build-tokens"
+      ]
+    },
+    {
+      "unit": "build-runtime",
+      "fromProjectGraph": [
+        "build-collections",
+        "build-compiler"
+      ],
+      "fromTaskGraph": [
+        "build-collections",
+        "build-compiler",
+        "build-test-utils"
+      ]
+    }
+  ],
+  "isomorphic": false
+}

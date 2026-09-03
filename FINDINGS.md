@@ -811,15 +811,32 @@ manifests stop being the graph — see the preconditions below — and
 `scripts/nx-to-nix.mjs` generating the table. Where it applies, prefer it to B
 for the same reasons: Nx runs once, offline, and never at execution time.
 
-**D. Nx tasks become Nix derivations.** *Not built, so this is an argument from
-the shape of the data rather than a measurement, and should be read as such.*
-The task graph carries two things the project graph does not: `dependsOn`
-ordering, which is recoverable from the package graph, and the per-task inputs,
-which `results/input-comparison.json` shows to be *less* complete than filesets
-written directly in Nix — they miss the root manifest and `pnpm-workspace.yaml`.
-With one build and one test target per project, this workspace's task graph is
-very nearly its project graph relabelled. Worth actually building for a
-workspace with several targets per project, where that stops being true.
+**D. Nx tasks become Nix derivations.** Rejected, and now measured rather than
+argued. `scripts/compare-task-graph.mjs` builds the unit-and-edge set each
+graph would generate and compares them
+(`results/task-graph-comparison.json`). They are **not** isomorphic, and both
+differences favour the project graph:
+
+- **The task graph is missing 5 of the 38 units**: `build-chain-a`,
+  `build-cli`, `build-orphan`, `build-report`, `build-web`. Those are exactly
+  the leaf projects nothing depends on, so `^build` never pulls their build
+  task in. Generating derivations from the task graph would therefore not
+  typecheck them — and Vitest does not typecheck either, so a type error in any
+  leaf package would be invisible. This is the same hole that had to be closed
+  by putting the build derivations into `nix flake check`; architecture D
+  reopens it by construction.
+- **It adds 3 spurious edges**: `build-lexer`, `build-parser` and
+  `build-runtime` all wait for `build-test-utils`, because `^build` follows
+  every edge and Nx's graph does not distinguish a dev dependency from a
+  runtime one. `test-utils` is test-only; it never enters those packages'
+  `dist`. This is the 4-versus-8 imprecision, propagated into build ordering.
+
+An earlier draft of this section said the task graph was "very nearly the
+project graph relabelled" and that D was worth building for a workspace with
+several targets per project. The first half was wrong in the direction that
+mattered, and the second may still hold — but the reason to look again would be
+targets the project graph cannot express, not the ordering, which it recovers
+correctly and more precisely.
 
 **E. Nx test atoms become Nix derivations.** The one place Nx supplies
 something genuinely not derivable from the manifests: the per-test-file split,
@@ -1148,6 +1165,7 @@ something being there.
   defines, rebuilt from a state where none of them existed. What is missing is
   only the one-off cost of a machine that has never seen the toolchain, and
   that is a property of Nix in general rather than of testing granularity.
-- Architecture D, the Nx task graph becoming Nix derivations, is argued against
-  from the shape of the data rather than measured. It was never built, and the
-  case for building it is a workspace with several targets per project.
+- Architecture D is now measured and rejected, but only for a workspace with
+  one build and one test target per project. Whether a task graph with several
+  real targets per project expresses something the project graph cannot is
+  still open.
